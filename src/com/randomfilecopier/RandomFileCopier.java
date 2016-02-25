@@ -24,6 +24,7 @@ import java.io.PrintStream;
 import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -45,8 +46,7 @@ import com.randomfilecopier.Utils.ExtensionFileFilter;
  */
 public class RandomFileCopier {
 	
-	
-	private File sourceDir, targetDir;
+	private Path sourcePath, targetPath;
 	private int maxFiles;
 	private long maxBytes, copiedBytes;
 	private List<File> randomFiles;
@@ -62,17 +62,17 @@ public class RandomFileCopier {
 	 * @param targetPath The target folder to copy the files
 	 * @param maxFiles The maximum number of files to copy. 0 will copy all the files
 	 */
-	public RandomFileCopier(String sourcePath, String targetPath, int maxFiles) {
-		sourceDir = new File(sourcePath);
-		targetDir = new File(targetPath.startsWith("/") ? targetPath : "/"+ targetPath);
+	public RandomFileCopier(String source, String target, int maxFiles) {
+		sourcePath = Paths.get(source, "");
+		targetPath = Paths.get(target.startsWith("/") ? target : "/"+ target, "");
 		this.maxFiles = maxFiles;
 		verbose = false;
 		rnd = new Random();
 		randomFiles = new ArrayList<>();
 		out = System.out;
-		maxBytes = targetDir.getUsableSpace();		
 		filter = new ExtensionFileFilter();
 		copiedBytes = 0;
+		maxBytes = getUsableBytesInTarget(targetPath.toFile());
 	}
 	
 	/**
@@ -105,17 +105,21 @@ public class RandomFileCopier {
 	 * @param maxBytesToCopy
 	 */
 	public void setMaxBytesToCopy(long maxBytesToCopy) {
-		File root = targetDir;
-		while(root.getParentFile() != null) 
-				root = root.getParentFile();
-		if(maxBytesToCopy < root.getUsableSpace())
+		if(maxBytesToCopy < getUsableBytesInTarget(targetPath.toFile()))
 			maxBytes = maxBytesToCopy;
 		else
-			maxBytes = root.getUsableSpace();
+			maxBytes = getUsableBytesInTarget(targetPath.toFile());
 	}
 	
 	public long getMaxBytesToCopy() {
-		return maxBytes <= targetDir.getUsableSpace() ? maxBytes : targetDir.getUsableSpace();
+		return maxBytes <= getUsableBytesInTarget(targetPath.toFile()) ? maxBytes : getUsableBytesInTarget(targetPath.toFile());
+	}
+	
+	private long getUsableBytesInTarget(File targetDestination) {
+		File root = targetDestination;
+		while(root.getParentFile() != null) 
+				root = root.getParentFile();
+		return root.getUsableSpace();
 	}
 	
 	/**
@@ -145,7 +149,7 @@ public class RandomFileCopier {
 		copiedBytes = 0;
 		randomFiles.clear();
 		out.println("Scanning source directory... ");
-		List<File> allFiles = Utils.getAllFilesInFolder(sourceDir, filter, 0);
+		List<File> allFiles = Utils.getAllFilesInFolder(sourcePath.toFile(), filter, 0);
 		long allFilesBytes = allFiles.stream().mapToLong(File::length).sum();
 		out.println(allFiles.size() + " files found");
 		int selectedIndex;
@@ -183,9 +187,10 @@ public class RandomFileCopier {
 		for(File f: randomFiles)
 			if(!Thread.currentThread().isInterrupted())	{
 				Path filePath = f.toPath();
-				Files.copy(filePath, targetDir.toPath().resolve(ensureFileName(f.getName())), options);
+				String path = filePath.subpath(filePath.getNameCount()-3, filePath.getNameCount()).toString();
+				Files.copy(filePath, targetPath.resolve(ensureFileName(f.getName())), options);
 				if(verbose)
-					out.println("Copied "+".../"+filePath.subpath(filePath.getNameCount()-3, filePath.getNameCount()) +" [" + Utils.byteSizeString(f.length(), 2) + "]");
+					out.println("Copied " + ".../" + path + " [" + Utils.byteSizeString(f.length(), 2) + "]");
 			}
 		out.println("Done. " + Utils.byteSizeString(copiedBytes, 4) + " copied");
 	}
@@ -198,11 +203,11 @@ public class RandomFileCopier {
 	 */
 	private String ensureFileName(String name) {
 		String newName = name;
-		if(targetDir.toPath().resolve(name).toFile().exists()) {
+		if(targetPath.resolve(name).toFile().exists()) {
 			int pos = name.lastIndexOf(".");
 			newName = name.substring(0, pos) + "(1)." + name.substring(pos+1);
 		}
-		while(targetDir.toPath().resolve(newName).toFile().exists()) {
+		while(targetPath.resolve(newName).toFile().exists()) {
 			int posL = newName.lastIndexOf("(");
 			int posR = newName.lastIndexOf(")");
 			int num = Integer.parseInt(newName.substring(posL+1, posR));
