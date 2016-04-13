@@ -37,7 +37,7 @@ import com.randomfilecopier.Utils.ExtensionFileFilter;
 
 /**
  * This class copies random files that are located in a folder and it
- * subsequent folders to a destination, supplying options such as limiting
+ * subsequent folders to a destination, supplying copyOptions such as limiting
  * the number of files, the total space to copy, or filtering the files by its extension.
  * 
  * @version 0.1
@@ -54,12 +54,13 @@ public class RandomFileCopier {
 	private boolean verbose;
 	private Random rnd;
 	private PrintStream out;
+	private CopyOption[] copyOptions = new CopyOption[]{COPY_ATTRIBUTES};
 	
 	/**
 	 * Constructor for a <tt>RandomFileCopier</tt> object 
 	 * 
-	 * @param sourcePath The source folder where the desired files are
-	 * @param targetPath The target folder to copy the files
+	 * @param source The source folder where the desired files are
+	 * @param target The target folder to copy the files
 	 * @param maxFiles The maximum number of files to copy. 0 will copy all the files
 	 */
 	public RandomFileCopier(String source, String target, int maxFiles) {
@@ -102,7 +103,7 @@ public class RandomFileCopier {
 
 	/**
 	 * Sets the maximum number of bytes that should be copied to the destination.
-	 * @param maxBytesToCopy
+	 * @param maxBytesToCopy The maximum number of bytes
 	 */
 	public void setMaxBytesToCopy(long maxBytesToCopy) {
 		if(maxBytesToCopy < getUsableBytesInTarget(targetPath.toFile()))
@@ -138,7 +139,7 @@ public class RandomFileCopier {
 	 */
 	public void randomCopy() throws IOException {
 		getRandomFilesInFolderTree();
-		copyFiles();
+		copyRandomFilesToTarget();
 	}
 	
 	/**
@@ -146,76 +147,70 @@ public class RandomFileCopier {
 	 * the given conditions and selects randomly a certain number of them
 	 */
 	private void getRandomFilesInFolderTree() {
-		copiedBytes = 0;
 		randomFiles.clear();
+
 		out.println("Scanning source directory... ");
 		List<File> allFiles = Utils.getAllFilesInFolder(sourcePath.toFile(), filter, 0);
 		long allFilesBytes = allFiles.stream().mapToLong(File::length).sum();
 		out.println(allFiles.size() + " files found");
-		int selectedIndex;
-		if(maxFiles >= allFiles.size() || maxFiles == 0) {	// if all files should be copied regarding the maxFiles constraint
+
+		if(maxFiles >= allFiles.size() || maxFiles == 0) {		// if all files should be copied regarding the maxFiles constraint
 			if(allFilesBytes > getMaxBytesToCopy())				// checks the maximum bytes required to be copied
-				while(allFilesBytes > getMaxBytesToCopy()) {
-					selectedIndex = rnd.nextInt(allFiles.size());
-					allFilesBytes -= allFiles.get(selectedIndex).length();
-					allFiles.remove(selectedIndex);
-				}
-			copiedBytes = allFilesBytes;
-			randomFiles.addAll(allFiles);
-		} else {											// if a certain number of files should be copied
-			while (randomFiles.size() < maxFiles && !allFiles.isEmpty()) {
-				File selectedFile = allFiles.get(rnd.nextInt(allFiles.size()));
-				long selectedFileSize = selectedFile.length();
-				if(selectedFileSize + copiedBytes <= getMaxBytesToCopy()) {		// checking the maximum bytes to be copied
-					randomFiles.add(selectedFile);
-					copiedBytes += selectedFileSize;	
-				}
-				allFiles.remove(selectedFile);
+				selectRandomFilesRegardingBytes(allFiles, allFilesBytes);
+		}
+		else													// if a certain number of files should be copied
+			selectRandomFilesRegardingBytesAndNumber(allFiles);
+	}
+
+	private void selectRandomFilesRegardingBytes(List<File> files, long allFilesBytes){
+		int selectedIndex;
+		long fileLength;
+		while(allFilesBytes > getMaxBytesToCopy()) {
+			selectedIndex = rnd.nextInt(files.size());
+			files.remove(selectedIndex);
+
+			fileLength = files.get(selectedIndex).length();
+			allFilesBytes -= fileLength;
+		}
+		copiedBytes = allFilesBytes;
+		randomFiles.addAll(files);
+	}
+
+	private void selectRandomFilesRegardingBytesAndNumber(List<File> files) {
+		while (randomFiles.size() < maxFiles && !files.isEmpty()) {
+			File selectedFile = files.get(rnd.nextInt(files.size()));
+			long fileLength = selectedFile.length();
+
+			if(fileLength + copiedBytes <= getMaxBytesToCopy()) {		// checking the maximum bytes to be copied
+				randomFiles.add(selectedFile);
+				copiedBytes += fileLength;
 			}
+			files.remove(selectedFile);
 		}
 	}
-	
+
 	/**
 	 * Copies the randomly selected files to the target destination
 	 * Renames duplicated files to ensure that files with the same name are not overwritten
 	 * 
 	 * @throws IOException 
 	 */
-	private void copyFiles() throws IOException {
-		CopyOption[] options = new CopyOption[]{COPY_ATTRIBUTES};
+	private void copyRandomFilesToTarget() throws IOException {
 		out.println("Copying files to target directory... ");
-		for(File f: randomFiles)
-			if(!Thread.currentThread().isInterrupted())	{
-				Path filePath = f.toPath();
-				String path = filePath.subpath(filePath.getNameCount()-3, filePath.getNameCount()).toString();
-				Files.copy(filePath, targetPath.resolve(ensureFileName(f.getName())), options);
-				if(verbose)
-					out.println("Copied " + ".../" + path + " [" + Utils.byteSizeString(f.length(), 2) + "]");
-			}
+		for(File randomFileToCopy: randomFiles)
+			if(!Thread.currentThread().isInterrupted())
+				copyFile(randomFileToCopy);
 		out.println("Done. " + Utils.byteSizeString(copiedBytes, 4) + " copied");
 	}
-	
-	/**
-	 * Ensures that the file name given is unique in the target directory, appending
-	 * (1), (2)... (n+1) to the file name in case it already exists
-	 * @param name The string of the file name
-	 * @return The modified string
-	 */
-	private String ensureFileName(String name) {
-		String newName = name;
-		if(targetPath.resolve(name).toFile().exists()) {
-			int pos = name.lastIndexOf(".");
-			newName = name.substring(0, pos) + "(1)." + name.substring(pos+1);
-		}
-		while(targetPath.resolve(newName).toFile().exists()) {
-			int posL = newName.lastIndexOf("(");
-			int posR = newName.lastIndexOf(")");
-			int num = Integer.parseInt(newName.substring(posL+1, posR));
-			newName = newName.substring(0, posL+1) + ++num +newName.substring(posR);
-		}
-		return newName;
+
+	private void copyFile(File fileToCopy) throws IOException {
+		Path filePath = fileToCopy.toPath();
+		String path = filePath.subpath(filePath.getNameCount()-3, filePath.getNameCount()).toString();
+		Files.copy(filePath, targetPath.resolve(Utils.ensureFileName(targetPath, fileToCopy.getName())), copyOptions);
+		if(verbose)
+			out.println("Copied " + ".../" + path + " [" + Utils.byteSizeString(fileToCopy.length(), 2) + "]");
 	}
-	
+
 	/***************************		Command line usage		***************************/
 	
 	private static final String DOC = "Random File Copier.\n\n"+
@@ -227,65 +222,95 @@ public class RandomFileCopier {
 	                                  "  -v, --verbose  Show some extra information of the process.\n"+
 	                                  "  -e, --extension=<extension> Extension required to the file.\n"+
 	                                  "  -s, --space=<maxbytes> Max bytes to copy in the destination.\n";
-	private static File src, tgt;
-	private static int max;
+	private static File sourceFile, targetFile;
+	private static String sourceString, targetString;
+	private static String[] extensionsCmd;
+	private static int maxFilesCmd;
+	private static boolean verboseCmd;
+	private static long maxBytesCmd;
 
-	@SuppressWarnings("unchecked")
 	public static void main(String[] args) throws IOException {
-		Map<String, Object> opts = new Docopt(DOC).withVersion("Random File Copier 0.1").parse(args);
-		String srcString = (String) opts.get("<source_directory>");
-		String tgtString = (String) opts.get("<target_directory>");
-		String maxString = (String) opts.get("<max_files>");
-		boolean verbose = (Boolean) opts.get("--verbose");
-		
-		List<String> extensionsList = (List<String>) opts.get("--extension");
-		String[] extensions = Arrays.stream(extensionsList.toArray()).map(s -> ((String)s).substring(1)).toArray(String[]::new);
+		parseArguments();
 
-		String maxBytesString = ((String) opts.get("--space"));
-		long maxBytes = 0;
-		if(maxBytesString != null)
-			maxBytes = Long.valueOf(maxBytesString.substring(1));
-		
-		if(validDirectories(srcString, tgtString) && validMaxFiles(maxString)) {
-			RandomFileCopier copier = new RandomFileCopier(src.toString(), tgt.toString(), max);
-			copier.setVerbose(verbose);
-			copier.setFilterExtensions(extensions);
-			if(maxBytes > 0)
-				copier.setMaxBytesToCopy(maxBytes);
+		if(validArguments()) {
+			RandomFileCopier copier = new RandomFileCopier(sourceFile.toString(), targetFile.toString(), maxFilesCmd);
+			copier.setVerbose(verboseCmd);
+			copier.setFilterExtensions(extensionsCmd);
+			if(maxBytesCmd > 0)
+				copier.setMaxBytesToCopy(maxBytesCmd);
 			copier.randomCopy();
 		}
 	}
-	
-	private static boolean validDirectories(String arg0, String arg1) {
-		boolean res = false;
-		src = new File(arg0);
-		tgt = new File(arg1);
-		if(!tgt.exists())
-			tgt.mkdir();
-		if(!src.exists())
+
+	@SuppressWarnings("unchecked")
+	private static void parseArguments(String... args) {
+		Map<String, Object> opts = new Docopt(DOC).withVersion("Random File Copier 0.1").parse(args);
+		sourceString = (String) opts.get("<source_directory>");
+		targetString = (String) opts.get("<target_directory>");
+		verboseCmd = (Boolean) opts.get("--verbose");
+
+		List<String> extensionsList = (List<String>) opts.get("--extension");
+		extensionsCmd = Arrays.stream(extensionsList.toArray()).map(s -> ((String) s).substring(1)).toArray(String[]::new);
+
+		String maxBytesString = ((String) opts.get("--space"));
+		maxBytesCmd = 0;
+		if(maxBytesString != null)
+			maxBytesCmd = Long.valueOf(maxBytesString.substring(1));
+
+		String maxFilesString = (String) opts.get("<max_files>");
+		try {
+			maxFilesCmd = Integer.parseInt(maxFilesString);
+		} catch (NumberFormatException e) {
+			maxFilesCmd = -1;
+		}
+	}
+
+	private static boolean validArguments() {
+		boolean result = isValidSource();
+		result &= isValidTarget();
+		result &= isValidMaxFilesString();
+
+		if(sourceFile.equals(targetFile)) {
+			printUsage("Source and target directory are the same");
+			result &= false;
+		}
+		else
+			result &= true;
+
+		return result;
+	}
+
+	private static boolean isValidSource() {
+		boolean result = false;
+		sourceFile = new File(sourceString);
+		if(!sourceFile.exists())
 			printUsage("Source path doesn't exist");
-		else if(!src.isDirectory())
+		else if(!sourceFile.isDirectory())
 			printUsage("Source path is not a directory");
-		else if(tgt.exists() && !tgt.isDirectory())
+		else
+			result = true;
+		return result;
+	}
+
+	private static boolean isValidTarget() {
+		boolean result = false;
+		targetFile = new File(targetString);
+		if(!targetFile.exists())
+			targetFile.mkdir();
+		if(targetFile.exists() && !targetFile.isDirectory())
 			printUsage("Target path is not a directory");
 		else
-			res = true;
-		if(src.equals(tgt)) {
-			printUsage("Source and target directory are the same");
-			res = false;
-		}
-		return res;
+			result = true;
+		return result;
 	}
 	
-	private static boolean validMaxFiles(String arg2) {
+	private static boolean isValidMaxFilesString() {
 		boolean res = false;
-		try {
-			max = Integer.parseInt(arg2);
-			if(max >= 0 || max <= Integer.MAX_VALUE)
-				res = true;
-			else
-				printUsage("MaxFiles must be between 0 and "+Integer.MAX_VALUE+" inclusives");
-		} catch (NumberFormatException e) {}
+		if(maxFilesCmd >= 0 && maxFilesCmd <= Integer.MAX_VALUE)
+			res = true;
+		else
+			printUsage("MaxFiles must be between 0 and "+Integer.MAX_VALUE+" inclusives");
+
 		if(!res)
 			printUsage("Invalid arguments");
 		return res;

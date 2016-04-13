@@ -18,6 +18,7 @@ package com.randomfilecopier;
 
 import java.io.File;
 import java.io.FileFilter;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -141,7 +142,30 @@ public class Utils {
 		}
 		return byteSizeString;
 	}
-	
+
+
+	/**
+	 * Ensures that the file name given is unique in the target directory, appending
+	 * (1), (2)... (n+1) to the file name in case it already exists
+	 * @param fileName The string of the file name
+	 * @return The modified string
+	 */
+	public static String ensureFileName(Path targetPath, String fileName) {
+		String newName = fileName;
+		if(targetPath.resolve(fileName).toFile().exists()) {
+			int pos = fileName.lastIndexOf(".");
+			newName = fileName.substring(0, pos) + "(1)." + fileName.substring(pos+1);
+		}
+		while(targetPath.resolve(newName).toFile().exists()) {
+			int posL = newName.lastIndexOf("(");
+			int posR = newName.lastIndexOf(")");
+			int num = Integer.parseInt(newName.substring(posL+1, posR));
+			newName = newName.substring(0, posL+1) + ++num +newName.substring(posR);
+		}
+		return newName;
+	}
+
+
 	/**
 	 * This class implements <code>{@link java.io.FileFilter}</code> to
 	 * accept a file with some of the given extensions. If no extensions are given
