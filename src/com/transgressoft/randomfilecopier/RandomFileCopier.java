@@ -16,7 +16,8 @@
 
 package com.transgressoft.randomfilecopier;
 
-import com.transgressoft.randomfilecopier.Utils.*;
+import com.transgressoft.util.*;
+import com.transgressoft.util.TransgressoftUtils.*;
 import org.docopt.*;
 
 import java.io.*;
@@ -59,7 +60,7 @@ public class RandomFileCopier {
 	private static long maxBytesCmd;
 
 	public static void main(String[] args) throws IOException {
-		parseArguments();
+		parseArguments(args);
 
 		if(validArguments()) {
 			RandomFileCopier copier = new RandomFileCopier(sourceFile.toString(), targetFile.toString(), maxFilesCmd);
@@ -257,7 +258,7 @@ public class RandomFileCopier {
 		randomFiles.clear();
 
 		out.println("Scanning source directory... ");
-		List<File> allFiles = Utils.getAllFilesInFolder(sourcePath.toFile(), filter, 0);
+		List<File> allFiles = TransgressoftUtils.getAllFilesInFolder(sourcePath.toFile(), filter, 0);
 		long allFilesBytes = allFiles.stream().mapToLong(File::length).sum();
 		out.println(allFiles.size() + " files found");
 
@@ -308,14 +309,14 @@ public class RandomFileCopier {
 		for(File randomFileToCopy: randomFiles)
 			if(!Thread.currentThread().isInterrupted())
 				copyFile(randomFileToCopy);
-		out.println("Done. " + Utils.byteSizeString(copiedBytes, 4) + " copied");
+		out.println("Done. " + TransgressoftUtils.byteSizeString(copiedBytes, 4) + " copied");
 	}
 
 	private void copyFile(File fileToCopy) throws IOException {
 		Path filePath = fileToCopy.toPath();
 		String path = filePath.subpath(filePath.getNameCount()-3, filePath.getNameCount()).toString();
-		Files.copy(filePath, targetPath.resolve(Utils.ensureFileNameOnPath(targetPath, fileToCopy.getName())), copyOptions);
+		Files.copy(filePath, targetPath.resolve(TransgressoftUtils.ensureFileNameOnPath(targetPath, fileToCopy.getName())), copyOptions);
 		if(verbose)
-			out.println("Copied " + ".../" + path + " [" + Utils.byteSizeString(fileToCopy.length(), 2) + "]");
+			out.println("Copied " + ".../" + path + " [" + TransgressoftUtils.byteSizeString(fileToCopy.length(), 2) + "]");
 	}
 }

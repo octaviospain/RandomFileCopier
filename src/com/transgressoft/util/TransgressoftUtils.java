@@ -14,15 +14,13 @@
  * limitations under the License.
  */
 
-package com.transgressoft.randomfilecopier;
+package com.transgressoft.util;
 
-import java.io.File;
-import java.io.FileFilter;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
+import java.io.*;
+import java.math.*;
+import java.nio.file.*;
+import java.text.*;
+import java.util.*;
 
 /**
  * Class that does some useful operations with files, directories, strings
@@ -31,9 +29,9 @@ import java.util.Random;
  * @author Octavio Calleya
  *
  */
-public class Utils {
+public class TransgressoftUtils {
 
-	private Utils () {}
+	private TransgressoftUtils() {}
 
 	/**
 	 * Retrieves a {@link List} with at most <tt>maxFiles</tt> files that are in a folder or
@@ -132,7 +130,7 @@ public class Utils {
 			binRemainder = (short) (bytesAmount % 1024);
 			decRemainder += Float.valueOf((float) binRemainder / 1024);
 		}
-		String remainderStr = Float.toString(decRemainder).substring(2);
+		String remainderStr = String.format("%f", decRemainder).substring(2);
 		sizeText = bytesAmount + (remainderStr.equals("0") ? "" : ","+remainderStr) + " " + bytesUnits[u];
 		return sizeText;
 	}
@@ -150,24 +148,19 @@ public class Utils {
 	public static String byteSizeString(long bytes, int numDecimals) {
 		if(numDecimals < 0)
 			throw new IllegalArgumentException("Given number of decimals can't be less than zero");
+
 		String byteSizeString = byteSizeString(bytes);
-		int pos = byteSizeString.lastIndexOf(',');
+		String decimalSharps = "";
+		for(int n = 0; n < numDecimals; n++)
+			decimalSharps += "#";
+		DecimalFormat decimalFormat = new DecimalFormat("#." + decimalSharps);
+		decimalFormat.setRoundingMode(RoundingMode.CEILING);
+
 		int unitPos = byteSizeString.lastIndexOf(' ');
-		if(pos != -1 && numDecimals > 0) {
-			String abs = byteSizeString.substring(0, pos+1);
-			int rem = Integer.parseInt(byteSizeString.substring(pos+1, unitPos));
-			short numDigits = (short) Integer.toString(rem).length();
-			int remainderIndex = numDecimals < numDigits ? numDecimals : numDigits;
-			int magnitudeEsc = (int) Math.pow(10.0, numDigits - remainderIndex * 1.0);
-			int boundedRemainder = rem / magnitudeEsc;
-			int remainderRem = rem % magnitudeEsc;
-			if(boundedRemainder != 0) {
-				int a = 5 * magnitudeEsc / 10;
-				if(remainderRem > a)
-					boundedRemainder ++;
-				byteSizeString = abs + (boundedRemainder%10 == 0 ? boundedRemainder/10 : boundedRemainder) + byteSizeString.substring(unitPos);
-			}
-		}
+		String stringValue = byteSizeString.substring(0, unitPos);
+		stringValue = stringValue.replace(',', '.');
+		float floatValue = Float.parseFloat(stringValue);
+		byteSizeString = decimalFormat.format(floatValue) + byteSizeString.substring(unitPos);
 		return byteSizeString;
 	}
 
@@ -175,6 +168,7 @@ public class Utils {
 	/**
 	 * Ensures that the file name given is unique in the target directory, appending
 	 * (1), (2)... (n+1) to the file name in case it already exists
+	 *
 	 * @param fileName The string of the file name
 	 * @param targetPath The path to check if there is a file with the name equals <tt>fileName</tt>
 	 * @return The modified string
@@ -188,8 +182,8 @@ public class Utils {
 		while(targetPath.resolve(newName).toFile().exists()) {
 			int posL = newName.lastIndexOf('(');
 			int posR = newName.lastIndexOf(')');
-			int num = Integer.parseInt(newName.substring(posL+1, posR));
-			newName = newName.substring(0, posL+1) + ++num +newName.substring(posR);
+			int num = Integer.parseInt(newName.substring(posL + 1, posR));
+			newName = newName.substring(0, posL + 1) + ++num + newName.substring(posR);
 		}
 		return newName;
 	}

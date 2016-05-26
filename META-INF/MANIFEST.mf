@@ -1,0 +1,3 @@
+Manifest-Version: 1.0
+Created-By: Octavio Calleya
+Main-Class: com.transgressoft.randomfilecopier.RandomFileCopier
