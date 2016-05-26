@@ -31,7 +31,7 @@ import static java.nio.file.StandardCopyOption.*;
  * subsequent folders to a destination, supplying copyOptions such as limiting
  * the number of files, the total space to copy, or filtering the files by its extension.
  *
- * @version 0.1
+ * @version 0.2.1
  * @author Octavio Calleya
  *
  */
