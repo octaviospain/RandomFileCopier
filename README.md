@@ -5,7 +5,7 @@ A java class that copies random files that are located in a folder and it subseq
 * Limits the bytes to be copied into the destinaion
 * Filter the available files by several extensions
 
-### Coming soon
+### To be done
 * Include hidden files
 * Option to copy the files with the folders where they were
 * Filter the files by matching some string in the name
@@ -14,6 +14,20 @@ A java class that copies random files that are located in a folder and it subseq
 You can use the RandomFileCopier by two ways:
 
 1. Instanciating the `RandomFileCopier.java` class in your java project
+
+```
+int maxFiles = 25;
+int maxBytes = 50000;
+String[] extensions = new String[]{"mp3", "txt", "xml", "pdf"};
+
+RandomFileCopier copier = new RandomFileCopier("/source_folder/", "/target_folder/", maxFiles);
+copier.setFilterExtensions(extensions);
+copier.setVerbose(true);
+copier.setMaxBytesToCopy(maxBytes);
+copier.randomCopy();
+// copier.abort()
+```
+
 2. Using it as a command line program with the packaged `.jar` (available in [releases](https://github.com/octaviospain/RandomFileCopier/releases)) passing arguments to it (thanks to [docopt](https://github.com/docopt/docopt.java)) with the following usage:
 
 ```
