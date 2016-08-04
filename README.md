@@ -50,6 +50,3 @@ Options:
     -e, --extension=<extension>    Extension required to the file.
     -s, --space=<maxbytes>         Max bytes to copy in the destination.
 ```
-
-## License
-RandomFileCopier is licensed under Apache License 2.0

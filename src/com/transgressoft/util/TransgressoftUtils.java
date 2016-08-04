@@ -166,7 +166,7 @@ public class TransgressoftUtils {
 			decRemainder += Float.valueOf((float) binRemainder / 1024);
 		}
 		String remainderStr = String.format("%f", decRemainder).substring(2);
-		sizeText = bytesAmount + (remainderStr.equals("0") ? "" : "," + remainderStr) + " " + bytesUnits[u];
+		sizeText = bytesAmount + (remainderStr.equals("0") ? "" : '.' + remainderStr) + ' ' + bytesUnits[u];
 		return sizeText;
 	}
 
