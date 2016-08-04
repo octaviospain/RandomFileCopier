@@ -99,7 +99,7 @@ public class RandomFileCopierTest {
 		assertEquals("Scanning source directory...", scanningSourceLine);
 		assertTrue(filesFoundLine.matches("\\d{1,} files found"));
 		assertEquals("Copying files to the destination directory...", copyingFilesLine);
-		assertTrue(doneLine.matches("Done. \\d+,?\\d* \\w+ copied"));
+		assertTrue(doneLine.matches("Done. \\d+.?\\d* \\w+ copied"));
 	}
 
 	@Test
