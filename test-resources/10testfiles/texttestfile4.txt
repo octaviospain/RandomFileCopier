@@ -1,0 +1,120 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:pt="http://xmlns.jcp.org/jsf/passthrough">
+    <h:head>
+        <title>Crash-Network</title>
+        <h:outputStylesheet library="css" name="general.css" />
+        <h:outputStylesheet library="css" name="bootstrap.min.css" />
+        <h:outputStylesheet library="css" name="paginacion.css" />
+        <h:outputScript library="js" name="jquery-1.11.2.min.js" />
+        <h:outputScript library="js" name="jquery.paging.min.js" />
+        <h:outputScript library="js" name="general.js" />
+    </h:head>
+    <h:body>
+        <nav class="navbar navbar-default">
+            <div class="container-fluid">
+                <div class="navbar-header navbar-header-len">
+                    <h:link class="navbar-brand" value="CrashNetwork" outcome="index" />
+                </div>
+                <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-2">
+                    <h:form class="navbar-form navbar-left">
+                        <div class="form-group">
+                            <h:inputText class="form-control" value="#{login.texto}"/> 
+                        </div>
+                        <h:commandButton class="btn btn-default" value="Buscar" action="#{login.doBuscar()}" />
+                    </h:form>
+                    <ul class="nav navbar-nav navbar-right">
+                        <li>
+                        <h:link styleClass="propia-enlace" value="${login.notifications.size()} Notificaciones" outcome="notificaciones"/>
+                        </li>
+                        <li>
+                            <h:link styleClass="propia-enlace" value="#{login.name} #{login.lastName}" />
+                        </li>
+                        <li>
+                            <h:form>
+                                <h:commandButton class="propia-enlace-logout btn-default navbar-right" value="Logout" action="#{login.doLogout()}" />
+                            </h:form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+        <div class="izq">
+            <div class="btn-group-vertical propio-btn-grupo-vertical propio-btn-grupo-vertical-menu">
+                    <h:link value="Muro" class="btn btn-default" />
+                    <h:link value="Mensajes" outcome="mensajes" class="btn btn-default" />
+                    <h:link value="Amigos" outcome="amigos" class="btn btn-default" />
+                    <h:link value="Grupos" outcome="grupos" class="btn btn-default" />
+                    <h:link value="Mis Grupos" outcome="misGrupos" class="btn btn-default" />
+                    <h:link value="Configuracion" outcome="configuracion" class="btn btn-default" />
+            </div>
+        </div>
+        <div class="central">
+            <div id="izq-central">
+            </div>
+            <div id="central">
+                <h:form id="pub">
+                <div>
+                    <p:panelGrid styleClass="propia-panelgrid">
+                        <p:row>
+                            <p:column styleClass="propia-td ancho-td-3"><h3>CrashNetwork - Agora</h3></p:column>
+                            <p:column styleClass="propia-td ancho-td-1">
+                                <h:commandButton style="float: right; margin-right: -10px !important" onclick="return fdIn()" value="Publicar" styleClass="btn btn-default btn-sm">
+                                    <f:ajax execute="textArea" listener="#{comentariosMuro.doHacerComentario()}" render=":form" onevent="paginacion" />
+                                </h:commandButton>
+                            </p:column>
+                        </p:row>
+                    </p:panelGrid>
+                </div>
+                <div class="emergente">
+                    <h:inputTextarea styleClass="form-control nobord" id="textArea" pt:placeholder="¿Que te cuentas?" value="#{comentariosMuro.textArea}" />
+                </div>
+                </h:form>
+                
+                            <h:form id="form">
+                                <p:dataList rendered="#{comentariosMuro.num_likes.size() > 0}" value="#{comentariosMuro.num_likes.entrySet()}" var="item" type="definition">
+                                    <p:panelGrid  styleClass="propia-comentarios-table propia-comentarios-spacing-table">
+                                        <p:row>
+                                            <p:column styleClass="propia-td ancho-td-1">
+                                                <h:graphicImage value="resources/img/hombre.jpg" width="80px" height="80px" />
+                                            </p:column>
+                                            <p:column rowspan="2" colspan="2" styleClass="propia-td propia-comentarios-td ancho-td-2">
+                                                <h:outputText value="#{comentariosMuro.listaComentarios.get(item.key).text}" />
+                                            </p:column>
+                                        </p:row>
+                                        <p:row>
+                                            <p:column styleClass="propia-td ancho-td-1" style="text-align: center">
+                                                <h:outputText value="#{comentariosMuro.listaComentarios.get(item.key).idMember.name} #{comentariosMuro.listaComentarios.get(item.key).idMember.lastName}" />
+                                            </p:column>
+                                        </p:row>
+                                        <p:row>
+                                            <p:column style="padding: 0 !important; background-color: #cccccc !important;" styleClass="propia-td"></p:column>
+                                            <p:column style="padding: 0 !important; background-color: #cccccc !important;width: 10%" styleClass="propia-td">
+                                                    <h:commandButton rendered="#{comentariosMuro.listaComentarios.get(item.key).idMember.getId() == login.id}" value="Eliminar" styleClass="btn btn-primary btn-sm">
+                                                        <f:ajax listener="#{comentariosMuro.doEliminarComentario(comentariosMuro.listaComentarios.get(item.key).id)}" render=":form" onevent="paginacion" />
+                                                    </h:commandButton>
+                                                    <h:commandButton rendered="#{comentariosMuro.listaComentarios.get(item.key).idMember.getId() != login.id}" value="Eliminar" styleClass="btn btn-primary btn-sm disabled" />
+                                            </p:column>
+                                            <p:column style="padding: 0 !important; background-color: #cccccc !important;width: 90%" styleClass="propia-td">
+                                                    <h:commandButton value="#{item.value} Likes" styleClass="btn btn-primary btn-sm">
+                                                        <f:ajax listener="#{comentariosMuro.doSubirLike(comentariosMuro.listaComentarios.get(item.key).idMember.getId() , comentariosMuro.listaComentarios.get(item.key).id)}" render=":form" onevent="paginacion" />
+                                                    </h:commandButton>
+                                            </p:column>
+                                        </p:row>
+                                   </p:panelGrid>
+                                </p:dataList>
+                            </h:form>
+                                <div class="pagination"></div>
+                            
+                       
+                        <div style="margin-top: 15%;width: 100%"></div>
+            </div>
+            <div id="der-central"></div>
+        </div>
+        <div class="der"></div>
+    </h:body>
+</html>
+    

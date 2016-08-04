@@ -2,7 +2,6 @@
 .project
 .settings/
 /bin/
-/build/
 .idea
 *.iml
-/out/
+/target/

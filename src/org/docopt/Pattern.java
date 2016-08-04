@@ -1,12 +1,8 @@
 package org.docopt;
 
-import static org.docopt.Python.count;
-import static org.docopt.Python.list;
-import static org.docopt.Python.set;
-import static org.docopt.Python.split;
+import java.util.*;
 
-import java.util.Arrays;
-import java.util.List;
+import static org.docopt.Python.*;
 
 abstract class Pattern {
 

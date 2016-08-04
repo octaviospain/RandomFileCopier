@@ -1,12 +1,8 @@
 package org.docopt;
 
-import static org.docopt.Python.bool;
-import static org.docopt.Python.in;
-import static org.docopt.Python.list;
-import static org.docopt.Python.plus;
-import static org.docopt.Python.repr;
+import java.util.*;
 
-import java.util.List;
+import static org.docopt.Python.*;
 
 /**
  * Leaf/terminal node of a pattern tree.

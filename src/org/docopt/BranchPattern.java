@@ -1,10 +1,8 @@
 package org.docopt;
 
-import static org.docopt.Python.in;
-import static org.docopt.Python.join;
-import static org.docopt.Python.list;
+import java.util.*;
 
-import java.util.List;
+import static org.docopt.Python.*;
 
 /**
  * Branch/inner node of a pattern tree.

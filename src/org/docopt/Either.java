@@ -1,10 +1,8 @@
 package org.docopt;
 
-import static org.docopt.Python.list;
+import java.util.*;
 
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import static org.docopt.Python.*;
 
 final class Either extends BranchPattern {
 

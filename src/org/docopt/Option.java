@@ -1,13 +1,10 @@
 package org.docopt;
 
-import static org.docopt.Python.bool;
-import static org.docopt.Python.partition;
-import static org.docopt.Python.repr;
-import static org.docopt.Python.split;
+import org.docopt.Python.*;
 
-import java.util.List;
+import java.util.*;
 
-import org.docopt.Python.Re;
+import static org.docopt.Python.*;
 
 final class Option extends LeafPattern {
 

@@ -1,0 +1,295 @@
+/*------------------------------------------------------------------------*/
+/* Control de Temperatura y Presión (periodicidad mediante relojes)       */
+/*------------------------------------------------------------------------*/
+#include <stdlib.h>
+#include <stddef.h>
+#include <assert.h>
+#include <string.h>
+#include <stdio.h>
+#include "z_rt.h"
+#include "z_thread.h"
+#include "z_mutex.h"
+#include "z_tempor.h"
+#define INACTIVO            0
+#define ACTIVO              1
+#define PERIODO_TMP_SEC     0
+#define PERIODO_TMP_NSEC    500000000
+#define PRIORIDAD_TMP       22
+#define TMP_UMBRAL_SUP      100
+#define TMP_UMBRAL_INF      90
+#define PERIODO_STMP_SEC    0
+#define PERIODO_STMP_NSEC   400000000
+#define PRIORIDAD_STMP      24
+#define STMP_VALOR_INI      80
+#define STMP_INC            1
+￼#define STMP_DEC            2
+#define PERIODO_PRS_SEC     0
+#define PERIODO_PRS_NSEC    350000000
+#define PRIORIDAD_PRS       26
+#define PRS_UMBRAL_SUP      1000
+#define PRS_UMBRAL_INF      900
+#define PERIODO_SPRS_SEC    0
+#define PERIODO_SPRS_NSEC   350000000
+#define PRIORIDAD_SPRS      28
+#define SPRS_VALOR_INI      800
+#define SPRS_INC            10
+#define SPRS_DEC            20
+#define PERIODO_MTR_SEC     1
+#define PERIODO_MTR_NSEC    0
+#define PRIORIDAD_MTR       20
+struct Data_Tmp {
+    pthread_mutex_t mutex;
+    int estado;
+    int val;
+};
+struct Data_Prs {
+    pthread_mutex_t mutex;
+    int estado;
+    int val;
+};
+struct Data_Mtr {
+    struct Data_Tmp tmp;
+    struct Data_Prs prs;
+};
+
+/*------------------------------------------------------------------------*/
+/*-- Procesos ------------------------------------------------------------*/
+/*------------------------------------------------------------------------*/
+const char* get_time(char *buf) {
+    time_t t = time(0);
+    char* f = ctime_r(&t, buf); /* buf de longitud mínima 26 */
+    f[strlen(f)-1] = ’\0’;
+    return f;
+}
+
+/*------------------------------------------------------------------------*/
+void ini_tmp(struct Data_Tmp* data) {
+    data->estado = INACTIVO;
+    data->val = STMP_VALOR_INI;
+    crear_mutex_protect(&data->mutex, 0);
+}
+
+void* process_stmp(void* arg) {
+    const struct timespec periodo = { PERIODO_STMP_SEC, PERIODO_STMP_NSEC };
+    struct timespec next;
+    struct Data_Tmp* data = arg;
+    int policy, prio;
+    const char* pol;
+    param_hebra(&policy, &prio);
+    pol = pol2str(policy);
+    printf("# Proceso Sensor de Temperatura [%s:%d]\n", pol, prio);
+    crear_temporizacion(&next);
+    while (1) {
+        esperar_temporizacion(&next, &periodo);
+        mutex_lock(&data->mutex);
+        switch (data->estado) {
+        case INACTIVO:
+            data->val += STMP_INC;
+            break;
+        case ACTIVO:
+            data->val -= STMP_DEC;
+            break;
+        }
+        mutex_unlock(&data->mutex);
+    }
+    return NULL;
+}
+
+void* process_tmp(void* arg) {
+    const struct timespec periodo = { PERIODO_TMP_SEC, PERIODO_TMP_NSEC };
+    struct timespec next;
+    struct Data_Tmp* data = arg;
+    char buf[30];
+    int policy, prio;
+    const char* pol;
+    param_hebra(&policy, &prio);
+    pol = pol2str(policy);
+    printf("# Proceso Control de Temperatura [%s:%d]\n", pol, prio);
+    crear_temporizacion(&next);
+    while (1) {
+        esperar_temporizacion(&next, &periodo);
+        mutex_lock(&data->mutex);
+        switch (data->estado) {
+        case INACTIVO:
+            if (data->val > TMP_UMBRAL_SUP) {
+                data->estado = ACTIVO;
+                printf("# [%s] Activar inyección de aire frío\n",
+            }
+            break;
+        case ACTIVO:
+                get_time(buf));
+            if (data->val < TMP_UMBRAL_INF) {
+                data->estado = INACTIVO;
+                printf("# [%s] Desactivar inyección de aire frío\n",
+            }
+            break;
+        }
+        mutex_unlock(&data->mutex);
+    }
+    return NULL;
+}
+
+void ini_prs(struct Data_Prs* data) {
+    data->estado = INACTIVO;
+    data->val = SPRS_VALOR_INI;
+    crear_mutex_protect(&data->mutex, 0);
+}
+void* process_sprs(void* arg) {
+    const struct timespec periodo = { PERIODO_SPRS_SEC, PERIODO_SPRS_NSEC };
+    struct timespec next;
+    struct Data_Prs* data = arg;
+    int policy, prio;
+    const char* pol;
+    param_hebra(&policy, &prio);
+    pol = pol2str(policy);
+    printf("# Proceso Sensor de Presión [%s:%d]\n", pol, prio);
+    crear_temporizacion(&next);
+    while (1) {
+        esperar_temporizacion(&next, &periodo);
+        mutex_lock(&data->mutex);
+        switch (data->estado) {
+        case INACTIVO:
+            data->val += SPRS_INC;
+            break;
+        case ACTIVO:
+            data->val -= SPRS_DEC;
+            break;
+        }
+        mutex_unlock(&data->mutex);
+    }
+    return NULL;
+}
+
+void* process_prs(void* arg) {
+    const struct timespec periodo = { PERIODO_PRS_SEC, PERIODO_PRS_NSEC };
+    struct timespec next;
+    struct Data_Prs* data = arg;
+    char buf[30];
+    int policy, prio;
+    const char* pol;
+    param_hebra(&policy, &prio);
+    pol = pol2str(policy);
+    printf("# Proceso Control de Presión [%s:%d]\n", pol, prio);
+    crear_temporizacion(&next);
+    while (1) {
+        esperar_temporizacion(&next, &periodo);
+        mutex_lock(&data->mutex);
+        switch (data->estado) {
+        case INACTIVO:
+            if (data->val > PRS_UMBRAL_SUP) {
+                data->estado = ACTIVO;
+                printf("# [%s] Abrir válvula de presión\n", get_time(buf));
+            }
+            break;
+        case ACTIVO:
+            if (data->val < PRS_UMBRAL_INF) {
+                data->estado = INACTIVO;
+                printf("# [%s] Cerrar válvula de presión\n", get_time(buf));
+            }
+            break;
+        }
+        mutex_unlock(&data->mutex);
+        }
+    return NULL;
+}
+
+void* process_mtr(void* arg) {
+    const struct timespec periodo = { PERIODO_MTR_SEC, PERIODO_MTR_NSEC };
+    struct timespec next;
+    struct Data_Mtr* data = arg;
+    char buf[30];
+    int policy, prio;
+    const char* pol;
+    param_hebra(&policy, &prio);
+    pol = pol2str(policy);
+    printf("# Proceso monitorización [%s:%d]\n", pol, prio);
+    crear_temporizacion(&next);
+    while (1) {
+        esperar_temporizacion(&next, &periodo);
+        /*--------------------------*/
+        mutex_lock(&data->tmp.mutex);
+        mutex_lock(&data->prs.mutex);
+        printf("# [%s] Temperatura: %d %s Presión: %d %s\n",
+               get_time(buf),
+               data->tmp.val, (data->tmp.estado == INACTIVO ? "++" : "--"),
+               data->prs.val, (data->prs.estado == INACTIVO ? "++" : "--"));
+        mutex_unlock(&data->prs.mutex);
+        mutex_unlock(&data->tmp.mutex);
+        /*--------------------------*/
+    }
+    return NULL;
+}
+
+/*------------------------------------------------------------------------*/
+/*-- Programa Principal --------------------------------------------------*/
+/*------------------------------------------------------------------------*/
+int maximo(int a, int b, int c, int d, int e) {
+    int m = (a > b ? a : b);
+    m = (c > m ? c : m);
+    m = (d > m ? d : m);
+    m = (e > m ? e : m);
+    return m;
+}
+
+int minimo(int a, int b, int c, int d, int e) {
+    int m = (a < b ? a : b);
+    m = (c < m ? c : m);
+    m = (d < m ? d : m);
+    m = (e < m ? e : m);
+    return m;
+}
+
+void usage(const char* nm) {
+    fprintf(stderr, "usage: %s [-h] [-ff] [-rr]\n", nm);
+    exit(EXIT_FAILURE);
+}
+
+void get_args(int argc, const char* argv[], int* policy) {
+    int i;
+    for (i = 1; i < argc; ++i) {
+        if (strcmp(argv[i], "-h")==0) {
+            usage(argv[0]);
+        } else if (strcmp(argv[i], "-ff")==0) {
+            *policy = SCHED_FIFO;
+        } else if (strcmp(argv[i], "-rr")==0) {
+            *policy = SCHED_RR;
+        } else {
+            usage(argv[0]);
+        }
+    }
+}
+
+int main(int argc, const char* argv[]) {
+    struct Data_Mtr data;
+    int policy = SCHED_FIFO;
+    int prio0 = 1;
+    int prio1 = PRIORIDAD_TMP;
+    int prio2 = PRIORIDAD_PRS;
+    int prio3 = PRIORIDAD_MTR;
+    int prio4 = PRIORIDAD_STMP;
+    int prio5 = PRIORIDAD_SPRS;
+    pthread_t t1, t2, t3, t4, t5;
+    const char* pol;
+    get_args(argc, argv, &policy);
+    prio0 = maximo(prio1, prio2, prio3, prio4, prio5) + 1;
+    init_real_time(policy, minimo(prio1, prio2, prio3, prio4, prio5), prio0);
+    chg_param_proc(policy, prio0);
+    param_proc(&policy, &prio0);
+    pol = pol2str(policy);
+    ini_tmp(&data.tmp);
+    ini_prs(&data.prs);
+    crear_hebra(&t1, process_tmp, &data.tmp, policy, prio1);
+    crear_hebra(&t2, process_prs, &data.prs, policy, prio2);
+    crear_hebra(&t3, process_mtr, &data, policy, prio3);
+    crear_hebra(&t4, process_stmp, &data.tmp, policy, prio4);
+    crear_hebra(&t5, process_sprs, &data.prs, policy, prio5);
+    printf("# Proceso principal [%s:%d]\n", pol, prio0);
+    unir_hebra(t1);
+    unir_hebra(t2);
+    unir_hebra(t3);
+    unir_hebra(t4);
+    unir_hebra(t5);
+    destruir_mutex(&data.tmp.mutex);
+    destruir_mutex(&data.prs.mutex);
+    return 0;
+}

@@ -1,5 +1,12 @@
+[![Build Status](https://travis-ci.org/octaviospain/RandomFileCopier.svg?branch=master)](https://travis-ci.org/octaviospain/RandomFileCopier)
+[![codecov](https://codecov.io/gh/octaviospain/RandomFileCopier/branch/master/graph/badge.svg)](https://codecov.io/gh/octaviospain/RandomFileCopier)
+[![license](https://img.shields.io/badge/license-apache%202-brightgreen.svg)](https://github.com/octaviospain/TimecodeString/blob/master/LICENSE.txt)
+
 # RandomFileCopier
-A java class that copies random files that are located in a folder and it subsequent folders to a destination, supplying options such as limiting the number of files, the total space in bytes to copy, or filtering the files by its extension; ensuring that the files with the same name are not overwritten by renaming them.
+A java class that copies random files that are located in a folder and it subsequent folders to a
+destination, supplying options such as limiting the number of files, the total space in bytes to copy,
+or filtering the files by its extension; ensuring that the files with the same name are not overwritten by renaming them.
+
 ## Features
 * Limits the number of files to copy
 * Limits the bytes to be copied into the destinaion
@@ -13,14 +20,14 @@ A java class that copies random files that are located in a folder and it subseq
 # Usage
 You can use the RandomFileCopier by two ways:
 
-1. Instanciating the `RandomFileCopier.java` class in your java project
+1. Instantiating the `RandomFileCopier.java` class in your java project
 
-```
-int maxFiles = 25;
+```java
+int maxFilesToCopy = 25;
 int maxBytes = 50000;
 String[] extensions = new String[]{"mp3", "txt", "xml", "pdf"};
 
-RandomFileCopier copier = new RandomFileCopier("/source_folder/", "/target_folder/", maxFiles);
+RandomFileCopier copier = new RandomFileCopier("/source_folder/", "/target_folder/", maxFilesToCopy);
 copier.setFilterExtensions(extensions);
 copier.setVerbose(true);
 copier.setMaxBytesToCopy(maxBytes);
@@ -28,7 +35,9 @@ copier.randomCopy();
 // copier.abort()
 ```
 
-2. Using it as a command line program with the packaged `.jar` (available in [releases](https://github.com/octaviospain/RandomFileCopier/releases)) passing arguments to it (thanks to [docopt](https://github.com/docopt/docopt.java)) with the following usage:
+2. Using it as a command line program with the packaged `.jar` (available in
+[releases](https://github.com/octaviospain/RandomFileCopier/releases)) passing arguments to it
+(thanks to [docopt](https://github.com/docopt/docopt.java)) with the following usage:
 
 ```
 Usage:

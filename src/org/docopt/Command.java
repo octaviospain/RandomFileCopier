@@ -1,6 +1,6 @@
 package org.docopt;
 
-import java.util.List;
+import java.util.*;
 
 final class Command extends Argument {
 

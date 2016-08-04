@@ -1,6 +1,6 @@
 package org.docopt;
 
-import java.util.Collections;
+import java.util.*;
 
 /**
  * Marker/placeholder for [options] shortcut.

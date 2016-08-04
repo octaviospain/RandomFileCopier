@@ -1,0 +1,311 @@
+﻿
+
+#define MAX_TICKS 4000
+
+char laberinto[25][80]={"+---------------------+---+----------------------------------------------------+",
+		       "|                     |   |                                                    |",
+		       "|                     |   +-----+                                              |",
+		       "|                     |         |                                              |",
+		       "|      +--+           +------+  +-----+                                        |",
+		       "|      |  |                  |        |                                        |",
+		       "|      +--+                  |  +-----+                                        |",
+		       "|                            |  |                                              |",
+		       "|                            +--+                                              |",
+		       "+----                                                                          |",
+		       " $                                                                             |",
+		       "+----                                                                          |",
+		       "|                                                                              |",
+		       "|                                                                              |",
+		       "|                                                                              |",
+		       "|               +-----+                                                        |",
+		       "|               |     |                                                        |",
+		       "|     +---+     |     |                                                        |",
+		       "|     |   |     |     |                                                        |",
+		       "|     |   +-----+  +--+                                                        |",
+		       "|     |            |                                                           |",
+		       "|     +------------+                                                           |",
+		       "|                                                                              |",
+		       "|                                                                              |",
+		       "+------------------------------------------------------------------------------+"};
+
+
+
+int pos_x=0;
+int pos_y=0;
+char *video=(char *)0xb8000;
+
+#define gotoxy(h,v) do {pos_x=h; pos_y=v; }while(0)
+
+void putch(char c)
+{
+   switch (c)
+   {
+   case '\n':
+   newline:
+      pos_x=0;
+      pos_y++;
+      if (pos_y>24) pos_y=0; /* es como un toro, como diria jesulin */
+      break;
+   case '\r':
+      pos_x=0;
+      break;
+   case '\t':
+      pos_x+=4;
+      if (pos_x>79) goto newline;
+      break;
+   default:
+      *(video+(pos_y*80+pos_x)*2)=c;
+      pos_x++;
+      if (pos_x>79) goto newline;
+   }
+}
+
+
+char digit[10];
+
+void printf(const char *format,...)
+{
+   void **arg=(void **)&format;
+   char *p=(char *)format;
+   char c, d;
+   char *t;
+   int q;
+   char i;
+
+   arg++;
+   while (0!=(c=*p++))
+   {
+      if (c=='%')
+      {
+         c=*p++;
+         switch (c)
+         {
+         case 'd':
+         case 'u':
+             q=(int) *arg++;
+             i=0;
+             do {
+               digit[i++]=(q%10)+'0';
+             } while (q/=10);
+             while (i--) putch(digit[i]);
+             break;
+         case 'x':
+             q=(int) *arg++;
+             i=0;
+             do {
+               d=(char)(q&0xf);
+               digit[i++]=(d>9)?d-10+'a':d+'0';
+             } while (q>>=4);
+             while (i--) putch(digit[i]);
+             break;
+         case 's':
+             t=*arg++;
+             while (0!=(c=*t++))
+               putch(c);
+             break;
+         }
+      }
+      else
+      {
+         putch(c);
+      }
+   }
+}
+
+
+extern char kbhit();
+extern char getscan();
+
+char kmap[]=" 1234567890'¡  qwertyuiop    asdfghjklñ çzxcvbnm,.-<   º      ";
+
+char getch()
+{
+   while (!kbhit());
+   return kmap[getscan()];
+}
+
+
+void clrscr()
+{
+   int i;
+
+   gotoxy(0,0);
+   for (i=0;i<25*80;i++) putch(' ');
+   gotoxy(0,0);
+}
+
+int game()
+{
+  int cont_ticks=0;
+  int cont_ticks_2=0;
+  int event_fin=0;
+  int event_tecla=0;
+  int event_avance=0;
+  int event_avance_2=0;
+  int capturado=0;
+  int you_win=0;
+
+  int tecla;
+
+  int pos_h=40;
+  int pos_v=12;
+  int next_pos_h=40;
+  int next_pos_v=12;
+
+  int v_p_v[4]={2,2,23,23};
+  int v_p_h[4]={2,75,2,75};
+
+  int i,j;
+
+  clrscr();
+  for (i=0;i<25;i++)
+    for (j=0;j<80;j++)
+      putch(laberinto[i][j]);
+  gotoxy(pos_h,pos_v);
+  putch('@');
+  for (i=0;i<4;i++)
+  {
+    gotoxy(v_p_h[i],v_p_v[i]);
+    putch('#');
+  }
+
+  getch();
+
+  while(!event_fin)
+  {
+    cont_ticks++;
+    if (cont_ticks==MAX_TICKS-1)      /* temporizacion personaje */
+    {
+      cont_ticks=0;
+      event_avance=1;
+    }
+    cont_ticks_2++;
+    if (cont_ticks_2==40*MAX_TICKS-1) /* temporizacion perseguidores */
+    {
+      cont_ticks_2=0;
+      event_avance_2=1;
+    }
+
+    if (kbhit())  /* si hay una tecla pulsada se captura, en caso contrario no se bloquea */
+    {
+      tecla=getch();
+      event_tecla=1;
+    }
+
+    if (event_tecla) /* si hay una tecla se procesa: proxima posicion */
+    {
+      event_tecla=0;
+      switch (tecla)
+      {
+      case 'o': next_pos_v=pos_v;
+		if (pos_h>0) next_pos_h=pos_h-1;
+		break;
+      case 'p': next_pos_v=pos_v;
+		if (pos_h<79) next_pos_h=pos_h+1;
+		break;
+      case 'a': next_pos_h=pos_h;
+		if (pos_v>0) next_pos_v=pos_v-1;
+		break;
+      case 'z': next_pos_h=pos_h;
+		if (pos_v<24) next_pos_v=pos_v+1;
+		break;
+      case 'q': event_fin=1;
+		break;
+      default:  break;
+      }
+
+      if (laberinto[next_pos_v][next_pos_h]=='$')
+      {
+	event_avance=1;
+	you_win=1;
+      }
+    }
+    if (event_avance) /* si toca moverse movemos */
+    {
+      event_avance=0;
+      if ((pos_h!=next_pos_h)||(pos_v!=next_pos_v))  /* solo si realmente se ha movido */
+      {
+	gotoxy(pos_h,pos_v);
+	putch(laberinto[pos_v][pos_h]);
+	pos_h=next_pos_h;
+	pos_v=next_pos_v;
+	gotoxy(pos_h,pos_v);
+	putch('@');		   /* imprimir en posicion actual */
+      }
+      for (i=0;i<4;i++)
+	if ((pos_h==v_p_h[i])&&(pos_v==v_p_v[i]))
+	  capturado=1;
+
+    }
+    if (event_avance_2) /* si toca mover a los perseguidores */
+    {
+      event_avance_2=0;
+      for (i=0;i<4;i++)
+      {
+	gotoxy(v_p_h[i],v_p_v[i]);
+	putch(' ');
+	if (pos_h<v_p_h[i])
+	{
+	  if (laberinto[v_p_v[i]][v_p_h[i]-1]==' ') v_p_h[i]--;
+	}
+	else if (pos_h>v_p_h[i])
+	{
+	  if (laberinto[v_p_v[i]][v_p_h[i]+1]==' ') v_p_h[i]++;
+	}
+	if (pos_v<v_p_v[i])
+	{
+	  if (laberinto[v_p_v[i]-1][v_p_h[i]]==' ') v_p_v[i]--;
+	}
+	else if (pos_v>v_p_v[i])
+	{
+	  if (laberinto[v_p_v[i]+1][v_p_h[i]]==' ') v_p_v[i]++;
+	}
+	gotoxy(v_p_h[i],v_p_v[i]);
+	putch('#');
+      }
+      if ((pos_h==v_p_h[i])&&(pos_v==v_p_v[i]))
+	capturado=1;
+    }
+
+    if (capturado)
+    {
+      gotoxy(10,10);
+      printf("Game Over!\n");
+      event_fin=1;
+    }
+    if (you_win)
+    {
+      gotoxy(10,10);
+      printf("You Win!\n");
+      event_fin=1;
+    }
+  }
+
+  gotoxy(20,20);
+  printf("Press ESC to play again\n");
+  do {
+    while (!kbhit());
+  } while (1!=getscan());
+
+  return(0);
+}
+
+
+void main( void* mbd, unsigned int magic )
+{
+   if ( magic != 0x2BADB002 )
+   {
+      /* Something went not according to specs. Print an error */
+      /* message and halt, but do *not* rely on the multiboot */
+      /* data structure. */
+   }
+ 
+   /* You could either use multiboot.h */
+   /* (http://www.gnu.org/software/grub/manual/multiboot/multiboot.html#multiboot_002eh) */
+   /* or do your offsets yourself. The following is merely an example. */ 
+   char * boot_loader_name =(char*) ((long*)mbd)[16];
+ 
+   /* Write your kernel here. */
+   do { game(); } while(1);
+}
+

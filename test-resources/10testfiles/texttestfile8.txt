@@ -1,0 +1,463 @@
+/**
+ UNIX Shel Project
+                Octavio Calleya Garcia
+                Grado en Ingeniería de Software
+                Grupo B
+ 
+ Sistemas Operativos
+ Grados I. Informatica, Computadores & Software
+ Dept. Arquitectura de Computadores - UMA
+ 
+ Some code adapted from "Fundamentos de Sistemas Operativos", Silberschatz et al.
+ 
+ To compile and run the program:
+ $ gcc Shell_project.c job_control.c -o Shell
+ $ ./Shell
+ (then type ^D to exit program)
+ 
+ **/
+
+
+
+#include "job_control.h"        // remember to compile with module job_control.c
+#include <time.h>
+
+#define MAX_LINE 256            // 256 chars per line, per command, should be enough.
+#define MAX_COMMANDS 128        // numero maximo de commandos almacenados en el array historial
+
+// -----------------------------------------------------------------------
+//                            MAIN
+// -----------------------------------------------------------------------
+
+job * list;
+job * postList;
+
+char* history[MAX_COMMANDS][2];
+int numCommands=0;
+
+void sortlist(job* list){
+        job* ptr=list;
+        job* next=list->next;
+        
+        job* aux=(job *) malloc(sizeof(job));
+        
+        while(next!=NULL){
+                while(next!=ptr){
+                        if(next->timetosignal<ptr->timetosignal){
+                                strcpy(aux->arguments, ptr->arguments);
+                                aux->command=strdup(ptr->command);
+                                aux->pgid=ptr->pgid;
+                                aux->state=ptr->state;
+                                aux->timetosignal=ptr->timetosignal;
+                                
+                                strcpy(ptr->arguments, next->arguments);
+                                ptr->command=strdup(next->command);
+                                ptr->pgid=next->pgid;
+                                ptr->state=next->state;
+                                ptr->timetosignal=next->timetosignal;
+                                
+                                strcpy(next->arguments,aux->arguments);
+                                next->command=strdup(aux->command);
+                                next->pgid=aux->pgid;
+                                next->state=aux->state;
+                                next->timetosignal=aux->timetosignal;
+                        }
+                        ptr=ptr->next;
+                }
+                ptr=list;
+                next=next->next;
+        }
+}
+
+void addToHistory(const char * command[]){
+        
+                        // Primero construimos el string del comando completo
+        
+        char line[MAX_LINE];
+        int i=1;
+        strcpy(line,command[0]);
+        
+        while(command[i]!=NULL){
+                strcat(line," ");
+                strcat(line,command[i]);
+                i++;
+        }
+        
+        if(numCommands<MAX_COMMANDS){
+                history[numCommands][0]=numCommands;
+                history[numCommands][1]=strdup(line);
+                numCommands++;
+        }
+        else{           // Si se alcanza el maximo de comandos borramos el primero y e insertamos al final
+                for(int i=1;i<MAX_COMMANDS;i++)
+                        history[i-1][1]=strdup(history[i][1]);
+        
+                history[MAX_COMMANDS-1][1]=strdup(line);
+        }
+}
+
+void mysigchld(int signum){
+        
+        int i,status,info,pid_wait;
+        enum status status_res;
+        
+        job* job;
+        
+        for (i=1; i<=list_size(list); i++){
+                
+                job=get_item_bypos(list, i);
+                pid_wait=waitpid(job->pgid, &status, WUNTRACED|WNOHANG);
+
+                if (pid_wait == job->pgid){
+                        
+                        status_res = analyze_status(status, &info);
+                        print_analyzed_status(status_res, info);
+                        fflush(stdout);
+                        
+                        if ((status_res==SIGNALED)||(status_res==EXITED)) {
+                                block_SIGCHLD();
+                                if(!delete_job(list, job)){
+                                        printf("Error: could not delete the job of the list\n");
+                                        fflush(stdout);
+                                }
+                                unblock_SIGCHLD();
+                                i--; 	
+                        }	
+                }	
+        }
+}
+
+void mysigalrm(int signum){
+                                                                        // como la lista esta ordenada
+        job* aux=get_item_bypos(postList, list_size(postList));         // el primer proceso es el de la alarma
+        
+        int pid_fork_post=fork();
+        
+        if(pid_fork_post<0){
+                printf("Fatal error: can not run the process\n");
+                exit(-1);
+        }
+        else if(pid_fork_post>0){       // Padre
+                new_process_group(pid_fork_post);
+                
+                block_SIGCHLD();                // anado el proceso a la lista de procesos
+                aux->pgid=pid_fork_post;
+                aux->state=BACKGROUND;
+                add_job(list, aux);
+                unblock_SIGCHLD();
+                
+                postList->next=postList->next->next;                                    // lo borro de la lista de postergados
+                postList->pgid--;
+                
+                if(!empty_list(postList)){                                              // si quedan procesos en la lista programo la alarma
+                        job* nextPost=get_item_bypos(postList, list_size(postList));    // para el primer proceso en la cola, que sigue ordenada
+                        int nextAlarm=(int)time(NULL);
+                        nextAlarm=nextPost->timetosignal-nextAlarm;
+                        alarm(nextAlarm);
+                }
+        }
+        else{                           // Hjo
+                new_process_group(getpid());
+                restore_terminal_signals();
+                execvp(aux->command,aux->arguments);
+                printf("Error. unknown command\n");
+                exit(-1);
+        }
+}
+
+int main(void)
+{
+	char inputBuffer[MAX_LINE];     /* buffer to hold the command entered */
+	int background;                 /* equals 1 if a command is followed by '&' */
+	char *args[MAX_LINE/2];         /* command line (of 256) has max of 128 arguments */
+	// probably useful variables:
+	int pid_fork;                   /* pid for created processs */
+	int status;                     /* status returned by wait */
+	enum status status_res;         /* status processed by analyze_status() */
+	int info;			/* info processed by analyze_status() */
+        
+        int listPosition;
+	
+	signal(SIGCHLD, mysigchld);
+        signal(SIGALRM, mysigalrm);
+        
+	ignore_terminal_signals();
+        
+        list=new_list("Jobs list");
+        postList=new_list("Posterged list");
+
+        
+	while (1)       /* Program terminates normally inside get_command() after ^D is typed*/
+	{
+		printf("COMMAND->");
+		fflush(stdout);
+		get_command(inputBuffer, MAX_LINE, args, &background);  /* get next command */
+		
+                //              If empty command
+		if(args[0]==NULL)
+                        continue;
+		
+                // 'cd'         Change Directory command
+		if(strcmp(args[0], "cd")==0){
+			chdir(args[1]);
+                        addToHistory(args);
+			continue;
+		}
+                
+                // 'jobs'       Jobs command            // Muestra la lista de procesos
+                if(strcmp(args[0],"jobs")==0){
+                        printf("\n");
+                        print_job_list(list);
+                        printf("\n");
+                        addToHistory(args);
+                        continue;
+                }
+                
+                // lanzamiento en segundo plano postergado. He introducido
+                // un array en la estructura job para almacenar los argumentos
+                // hasta su ejecucion postergada, asi como el tiempo para el que se programa
+                if((strcmp(args[0],"after")==0)&&(args[1]!=NULL)&&(args[2]!=NULL)){
+                        int seconds=atoi(args[1]);
+                        addToHistory(args);
+                        
+                        if(seconds<0||seconds>3600){
+                                printf("\nError: Negative or too much seconds\n\n");
+                                fflush(stdout);
+                        }
+                        else{
+                                job* postJob=new_job(NULL, args[2], STOPPED);
+                                int i=0;
+                                
+                                while(args[i+2]!=NULL){                         // almaceno los argumentos
+                                        postJob->arguments[i]=args[i+2];
+                                        i++;
+                                }
+                        
+                                block_SIGCHLD();
+                                
+                                postJob->timetosignal=(int)time(NULL)+seconds;
+                                
+                                if(empty_list(postList)){                       // si la lista está vacia
+                                        alarm(seconds);                         // programo la alarma
+                                }
+                                else{
+                                        job* firstJob=get_item_bypos(postList, list_size(postList));    // Si no, miro si el primer elemento tiene alarma
+                                        if(postJob->timetosignal<firstJob->timetosignal){               // antes que el que se quiere programar
+                                                alarm(seconds);                                         // Si es así, solo inserto el elemento en la lista y mantengo ordenada,
+                                        }                                                               // si no, programo la alarma, inserto y ordeno
+                                }
+                                
+                                add_job(postList, postJob);
+                                sortlist(postList);
+                                unblock_SIGCHLD();
+                                
+                                printf("\nProgramado %s para dentro de %d segundos\n\n",args[2],seconds);
+                                fflush(stdout);
+                        }
+                        continue;
+                }
+                
+                // 'historial'  Historial command       // Muestra el historial de comandos ejecutados
+                if(strcmp(args[0], "historial")==0){
+                        addToHistory(args);
+                        if(args[1]==NULL){
+                                for(int i=0;i<numCommands;i++){
+                                        printf("%d\t%s\n",history[i][0],history[i][1]);
+                                }
+                        }
+                        else{
+                                addToHistory(args);
+                                printf("historial n no implementado\n");
+                        }
+                        continue;
+                }
+                
+                // simple pipe implementation without arguments
+                if((args[0]!=NULL)&&(args[2]!=NULL)&&(strcmp(args[1],"|")==0)){
+                        addToHistory(args);
+                        int descf[2],fno;
+                        pipe(descf);
+                        
+                        pid_fork=fork();
+                        if(pid_fork<0){
+                                printf("Fatal error: can not run the process\n");
+                                exit(-1);
+                        }
+                        else if(pid_fork>0){
+                                printf("Fork1 padre\n");
+                                int pid_fork2=fork();
+                                if(pid_fork<0){
+                                        printf("(Fatal error: can not run the process\n");
+                                        exit(-1);
+                                }
+                                else if(pid_fork2>0){
+                                        
+                                        
+                                }
+                                else{
+                                        new_process_group(getpid());
+                                        restore_terminal_signals();
+                                        fno=fileno(stdout);            // el proceso padre ejecuta el primer programa y cambia su
+                                        dup2(descf[1],fno);            // salida estandar al pipe cerrando la entrada del pipe
+                                        close(descf[0]);
+                                        execlp(args[0],args[0],NULL);
+                                        printf("Error: unknown command\n");
+                                        exit(-1);
+                                }
+                                waitpid(pid_fork2,&status,WUNTRACED);
+                        }
+                        else{
+                                new_process_group(getpid());
+                                restore_terminal_signals();     // proceso hijo tiene una copia del pipe del padre,
+                                fno=fileno(stdin);              // en el fork, ejecuta el segundo programa y cambia su
+                                dup2(descf[0],fno);             // entrada estandar por el pipe cerrando la salida del pipe
+                                close(descf[1]);
+                                execlp(args[2],args[2],NULL);
+                                exit(-1);
+                        }
+                        continue;
+                }
+                
+                // 'fg'         Foreground command
+                if(strcmp(args[0],"fg")==0){
+                        addToHistory(args);
+                        if(empty_list(list)){
+                                printf("There are no jobs\n");
+                                fflush(stdout);
+                                continue;
+                        }
+                        else{
+                                if(args[1]==NULL){                      // Si no se indica el proceso se escoge el ultimo
+                                        listPosition=list_size(list);
+                                }
+                                else{
+                                        listPosition=atoi(args[1]);
+                                        if(listPosition<1||listPosition>list_size(list)){
+                                                printf("Invalid number of process\n");
+                                                continue;
+                                        }
+                                }
+                                block_SIGCHLD();                        // Bloqueamos la señal mientras accedemos a la lista
+                                job *auxJob=get_item_bypos(list, listPosition);
+                                unblock_SIGCHLD();                      // Desbloqueamos la señal
+                                
+                                set_terminal(auxJob->pgid);             // Le damos el terminal
+                                if(killpg(auxJob->pgid,SIGCONT)<0){                             // Lo continuamos
+                                        printf("Error: can not continue process\n");            // si estab stopped
+                                        fflush(stdout);
+                                        continue;
+                                }
+                                printf("\nForeground pid: %d | Command: %s\n\n",auxJob->pgid,auxJob->command);
+                                auxJob->state=FOREGROUND;                       // actualizamos su estado
+                                
+                                waitpid(auxJob->pgid,&status,WUNTRACED);
+                                
+                                set_terminal(getpid());                         // Recuperamos el terminal aqui
+                                status_res=analyze_status(status, &info);       // Mostramos la informacion del estado
+                                print_analyzed_status(status,info);
+                                
+                                if(status_res==SUSPENDED||status_res==SIGNALED){                       // Chequeamos el estado del proceso
+                                        auxJob->state=STOPPED;
+                                }                                               // y si no esta suspendido lo quitamos de la lista
+                                else{
+                                        block_SIGCHLD();
+                                        if(!delete_job(list, auxJob)){
+                                                printf("Error: could not delete the job of the list\n");
+                                                fflush(stdout);
+                                        }
+                                        unblock_SIGCHLD();
+                                }
+                        }
+                        continue;
+                }
+                
+                // 'bg'         Background command
+                if(strcmp(args[0],"bg")==0){
+                        addToHistory(args);
+                        if(empty_list(list)){
+                                printf("There are no jobs\n");
+                                fflush(stdout);
+                        }
+                        else{
+                                if(args[1]==NULL)                       // Si no se indica el proceso se escoge el ultimo
+                                        listPosition=list_size(list);
+                                else{
+                                        listPosition=atoi(args[1]);
+                                        if(listPosition<1||listPosition>list_size(list)){
+                                                printf("Invalid number of process\n");
+                                                continue;
+                                        }
+                                }
+                                
+                                block_SIGCHLD();                        // Bloqueamos la señal mientras accedemos a la lista
+                                job *auxJob=get_item_bypos(list, listPosition);
+                                unblock_SIGCHLD();
+                                
+                                if(auxJob->state==STOPPED){
+                                        auxJob->state=BACKGROUND;
+                                        if(killpg(auxJob->pgid,SIGCONT)<0){
+                                                printf("Error: can not background process\n");
+                                                fflush(stdout);
+                                                continue;
+                                        }
+                                }
+                                
+                                printf("\nBackground pid: %d | Command: %s\n\n",auxJob->pgid,auxJob->command);
+                                fflush(stdout);
+                        }
+                        continue;
+                }
+                
+                // EJECUTA UN PROCESO
+                
+                pid_fork=fork();
+                if(pid_fork<0){                                 // Error
+                        printf("Fatal error: can not run the process\n");
+                        exit(-1);
+                }
+		else if (pid_fork>0){                           // Padre=shell
+                        
+			new_process_group(pid_fork);
+			
+			if (background) {                       // Background
+                                
+                                block_SIGCHLD();
+                                job *auxJob=new_job(pid_fork, args[0], BACKGROUND);
+                                add_job(list,auxJob);
+                                unblock_SIGCHLD();
+                                
+				printf("\nBackground pid: %d | Command: %s\n\n",pid_fork,args[0]);
+				fflush(stdout);
+			} else {                                // Foreground
+                                
+                                printf("\nForeground pid: %d | Command: %s\n\n",pid_fork,args[0]);
+                                
+				set_terminal(pid_fork);
+				waitpid(pid_fork,&status, WUNTRACED);
+                                set_terminal(getpid());
+				
+                                status_res=analyze_status(status,&info);
+				print_analyzed_status(status_res,info);
+                                fflush(stdout);
+                                
+                                if(status_res==SUSPENDED){                      // Si se suspende lo almacenamos en la lista
+                                        block_SIGCHLD();
+                                        job * auxJob=new_job(pid_fork, args[0], STOPPED);
+                                        add_job(list, auxJob);
+                                        unblock_SIGCHLD();
+                                }
+			}
+                        addToHistory(args);
+		}
+                else {				 // Hijo
+			new_process_group(getpid());
+			restore_terminal_signals();
+                        if(!background)
+                                set_terminal(getpid());
+                        addToHistory(args);
+			execvp(args[0],args);
+                        printf("Error: unknown command\n");
+                        exit(-1);
+		}
+	} // end while
+}
