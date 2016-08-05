@@ -55,7 +55,7 @@ public class RandomFileCopier {
 	 */
 	public RandomFileCopier(String source, String destination, int maxFilesToCopy) {
 		sourcePath = Paths.get(source, "");
-		destinationPath = Paths.get(destination.startsWith("/") ? destination : "/" + destination, "");
+		destinationPath = Paths.get(destination, "");
 		this.maxFilesToCopy = maxFilesToCopy;
 		verbose = false;
 		random = new Random();
@@ -145,12 +145,18 @@ public class RandomFileCopier {
 		out.println("Scanning source directory...");
 		filesInSource = TransgressoftUtils.getAllFilesInFolder(sourcePath.toFile(), filter, 0);
 		filesInSourceBytes = filesInSource.stream().mapToLong(File::length).sum();
-		out.println(Integer.toString(filesInSource.size()) + " files found");
 
-		if (filesInSource.size() < maxFilesToCopy || maxFilesToCopy == 0)
-			selectRandomFilesLimitingBytes();
-		else
-			selectRandomFilesLimitingBytesAndNumber();
+		if (filesInSource.isEmpty()) {
+			out.println("No files found with the given constraints");
+		}
+		else {
+			out.println(Integer.toString(filesInSource.size()) + " files found");
+
+			if (filesInSource.size() < maxFilesToCopy || maxFilesToCopy == 0)
+				selectRandomFilesLimitingBytes();
+			else
+				selectRandomFilesLimitingBytesAndNumber();
+		}
 	}
 
 	private void selectRandomFilesLimitingBytes() {
@@ -169,7 +175,7 @@ public class RandomFileCopier {
 	}
 
 	private void selectRandomFilesLimitingBytesAndNumber() {
-		while (randomSelectedFiles.size() < maxFilesToCopy && ! filesInSource.isEmpty()) {
+		while (randomSelectedFiles.size() < maxFilesToCopy) {
 			File selectedFile = filesInSource.get(random.nextInt(filesInSource.size()));
 			long fileLength = selectedFile.length();
 
@@ -189,9 +195,10 @@ public class RandomFileCopier {
 	 */
 	private void copyRandomFilesToDestination() throws IOException {
 		out.println("Copying files to the destination directory...");
+
 		for (File randomFileToCopy : randomSelectedFiles)
-			if (! Thread.currentThread().isInterrupted())
 				copyFile(randomFileToCopy);
+
 		out.println("Done. " + TransgressoftUtils.byteSizeString(copiedBytes, 4) + " copied");
 	}
 

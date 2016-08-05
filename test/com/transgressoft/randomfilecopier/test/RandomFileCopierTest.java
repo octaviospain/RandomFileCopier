@@ -103,6 +103,28 @@ public class RandomFileCopierTest {
 	}
 
 	@Test
+	public void copyFromEmptyFolder() throws Exception {
+		File logFile = testFolder.newFile("log.txt");
+		PrintStream printStream = new PrintStream(logFile);
+		TemporaryFolder emptyFolder = new TemporaryFolder();
+		emptyFolder.create();
+		randomFileCopier = new RandomFileCopier(emptyFolder.getRoot().getAbsolutePath(), testFolderPath, 0, printStream);
+		randomFileCopier.setVerbose(true);
+		randomFileCopier.randomCopy();
+
+		Scanner logScanner = new Scanner(logFile);
+		String scanningSourceLine = logScanner.nextLine();
+		String noFilesFoundLine = logScanner.nextLine();
+		logScanner.close();
+		assertTrue(logFile.delete());
+		destinationFiles = testFolder.getRoot().listFiles();
+
+		assertEquals(0, destinationFiles.length);
+		assertEquals("Scanning source directory...", scanningSourceLine);
+		assertEquals("No files found with the given constraints", noFilesFoundLine);
+	}
+
+	@Test
 	public void copyAllFilesLimitingTheNumber() throws Exception {
 		int maxFilesToCopy = 5;
 		randomFileCopier = new RandomFileCopier(tenTestFilesFolder, testFolderPath, 5);
@@ -138,7 +160,18 @@ public class RandomFileCopierTest {
 		assertEquals(10, destinationFiles.length);
 		assertTrue(areTheSameFiles(sourceFiles, destinationFiles));
 	}
-	
+
+	@Test
+	public void copyMoreFilesThanAvailableShouldCopyAll() throws Exception {
+		randomFileCopier = new RandomFileCopier(tenTestFilesFolder, testFolderPath, 11);
+		randomFileCopier.randomCopy();
+
+		destinationFiles = testFolder.getRoot().listFiles();
+
+		assertEquals(10, destinationFiles.length);
+		assertTrue(areTheSameFiles(sourceFiles, destinationFiles));
+	}
+
 	@Test
 	public void copyAllFiles() throws Exception {
 		randomFileCopier = new RandomFileCopier(tenTestFilesFolder, testFolderPath, 0);
