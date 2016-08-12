@@ -30,30 +30,31 @@ public class RandomFileCopier {
 	private ExtensionFileFilter filter;
 	private boolean verbose;
 	private Random random;
-	private PrintStream out;
+	private PrintStream outStream;
 	private CopyOption[] copyOptions = new CopyOption[]{COPY_ATTRIBUTES};
 
 	/**
 	 * Constructor for a <tt>RandomFileCopier</tt> object
 	 *
-	 * @param sourcePath The source folder where the desired files are
+	 * @param sourcePath      The source folder where the desired files are
 	 * @param destinationPath The destination folder to copy the files
-	 * @param maxFilesToCopy   The maximum number of files to copy. 0 will copy all the files
-	 * @param output     The OutputStream where the log messages will be printed
+	 * @param maxFilesToCopy  The maximum number of files to copy. 0 will copy all the files
+	 * @param output          The OutputStream where the log messages will be printed
 	 */
 	public RandomFileCopier(String sourcePath, String destinationPath, int maxFilesToCopy, PrintStream output) {
 		this(sourcePath, destinationPath, maxFilesToCopy);
-		out = output;
+		outStream = output;
 	}
 
 	/**
 	 * Constructor for a <tt>RandomFileCopier</tt> object
 	 *
-	 * @param source   The source folder where the desired files are
-	 * @param destination   The destination folder to copy the files
+	 * @param source         The source folder where the desired files are
+	 * @param destination    The destination folder to copy the files
 	 * @param maxFilesToCopy The maximum number of files to copy. 0 will copy all the files
 	 */
 	public RandomFileCopier(String source, String destination, int maxFilesToCopy) {
+		outStream = System.out;
 		sourcePath = Paths.get(source, "");
 		destinationPath = Paths.get(destination, "");
 		this.maxFilesToCopy = maxFilesToCopy;
@@ -61,7 +62,6 @@ public class RandomFileCopier {
 		random = new Random();
 		randomSelectedFiles = new ArrayList<>();
 		filesInSource = new ArrayList<>();
-		out = System.out;
 		filter = new ExtensionFileFilter();
 		copiedBytes = 0;
 		maxBytesToCopy = getUsableBytesInDestination(destinationPath.toFile());
@@ -71,6 +71,7 @@ public class RandomFileCopier {
 	 * Returns the amount of bytes that are usable in the destination path
 	 *
 	 * @param destinationFolder The {@link File} of the destination folder
+	 *
 	 * @return
 	 */
 	private long getUsableBytesInDestination(File destinationFolder) {
@@ -132,7 +133,7 @@ public class RandomFileCopier {
 		copiedBytes = 0;
 		filesInSourceBytes = 0;
 		getRandomFilesInFolderTree();
-		if(! filesInSource.isEmpty())
+		if (! filesInSource.isEmpty())
 			copyRandomFilesToDestination();
 	}
 
@@ -143,15 +144,15 @@ public class RandomFileCopier {
 	private void getRandomFilesInFolderTree() {
 		randomSelectedFiles.clear();
 
-		out.println("Scanning source directory...");
+		outStream.println("Scanning source directory...");
 		filesInSource = TransgressoftUtils.getAllFilesInFolder(sourcePath.toFile(), filter, 0);
 		filesInSourceBytes = filesInSource.stream().mapToLong(File::length).sum();
 
 		if (filesInSource.isEmpty()) {
-			out.println("No files found with the given constraints");
+			outStream.println("No files found with the given constraints");
 		}
 		else {
-			out.println(Integer.toString(filesInSource.size()) + " files found");
+			outStream.println(Integer.toString(filesInSource.size()) + " files found");
 
 			if (filesInSource.size() < maxFilesToCopy || maxFilesToCopy == 0)
 				selectRandomFilesLimitingBytes();
@@ -195,12 +196,12 @@ public class RandomFileCopier {
 	 * @throws IOException
 	 */
 	private void copyRandomFilesToDestination() throws IOException {
-		out.println("Copying files to the destination directory...");
+		outStream.println("Copying files to the destination directory...");
 
 		for (File randomFileToCopy : randomSelectedFiles)
-				copyFile(randomFileToCopy);
+			copyFile(randomFileToCopy);
 
-		out.println("Done. " + TransgressoftUtils.byteSizeString(copiedBytes, 4) + " copied");
+		outStream.println("Done. " + TransgressoftUtils.byteSizeString(copiedBytes, 4) + " copied");
 	}
 
 	private void copyFile(File fileToCopy) throws IOException {
@@ -210,7 +211,7 @@ public class RandomFileCopier {
 		Files.copy(filePath, destinationPath.resolve(ensuredFileName), copyOptions);
 		if (verbose) {
 			String sizeString = TransgressoftUtils.byteSizeString(fileToCopy.length(), 2);
-			out.println("Copied " + ".../" + path + " [" + sizeString + "]");
+			outStream.println("Copied " + ".../" + path + " [" + sizeString + "]");
 		}
 	}
 }
