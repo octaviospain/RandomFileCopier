@@ -54,8 +54,6 @@ public class RandomFileCopierRunner {
 	private static boolean verboseCmd;
 	private static long maxBytesCmd;
 
-	private RandomFileCopierRunner() {}
-
 	public static void main(String[] args) throws IOException {
 		parseArguments(args);
 
@@ -100,12 +98,14 @@ public class RandomFileCopierRunner {
 		result &= isValidTarget();
 		result &= isValidMaxFilesString();
 
-		if (sourceFile.equals(targetFile)) {
-			printUsage("Source and target directory are the same");
-			result &= false;
+		if (result) {
+			if (sourceFile.equals(targetFile)) {
+				printUsage("Source and target directory are the same");
+				result &= false;
+			}
+			else
+				result &= true;
 		}
-		else
-			result &= true;
 
 		return result;
 	}
@@ -139,10 +139,7 @@ public class RandomFileCopierRunner {
 		if (maxFilesCmd >= 0 && maxFilesCmd <= Integer.MAX_VALUE)
 			res = true;
 		else
-			printUsage("MaxFiles must be between 0 and " + Integer.MAX_VALUE + " inclusives");
-
-		if (! res)
-			printUsage("Invalid arguments");
+			printUsage("MaxFiles must be between 0 and " + Integer.MAX_VALUE + " inclusively");
 		return res;
 	}
 

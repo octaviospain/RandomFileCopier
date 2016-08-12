@@ -7,4 +7,5 @@ coverage:
 
   ignore:
     - "src/org/docopt/*"
+    - "src/com/transgressoft/util/*"
     - "test/*"

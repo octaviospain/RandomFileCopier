@@ -132,7 +132,8 @@ public class RandomFileCopier {
 		copiedBytes = 0;
 		filesInSourceBytes = 0;
 		getRandomFilesInFolderTree();
-		copyRandomFilesToDestination();
+		if(! filesInSource.isEmpty())
+			copyRandomFilesToDestination();
 	}
 
 	/**

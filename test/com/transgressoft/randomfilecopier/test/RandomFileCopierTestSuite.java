@@ -6,8 +6,8 @@ import org.junit.runners.*;
 /**
  * @author Octavio Calleya
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({RandomFileCopierTest.class})
+@RunWith (Suite.class)
+@Suite.SuiteClasses ({RandomFileCopierTest.class, RandomFileCopierRunnerTest.class})
 public class RandomFileCopierTestSuite {
 
 }
