@@ -31,7 +31,7 @@ import static java.nio.file.StandardCopyOption.*;
  * the number of files, the total space to copy, or filtering the files by its extension.
  *
  * @author Octavio Calleya
- * @version 0.2.3
+ * @version 0.2.4
  */
 public class RandomFileCopier {
 
@@ -39,7 +39,6 @@ public class RandomFileCopier {
 	private Path destinationPath;
 	private int maxFilesToCopy;
 	private long maxBytesToCopy;
-	private long filesInSourceBytes;
 	private long copiedBytes;
 	private List<File> filesInSource;
 	private List<File> randomSelectedFiles;
@@ -147,9 +146,8 @@ public class RandomFileCopier {
 		filesInSource.clear();
 		randomSelectedFiles.clear();
 		copiedBytes = 0;
-		filesInSourceBytes = 0;
 		getRandomFilesInFolderTree();
-		if (! filesInSource.isEmpty())
+		if (! randomSelectedFiles.isEmpty())
 			copyRandomFilesToDestination();
 	}
 
@@ -162,47 +160,37 @@ public class RandomFileCopier {
 
 		outStream.println("Scanning source directory...");
 		filesInSource = TransgressoftUtils.getAllFilesInFolder(sourcePath.toFile(), filter, 0);
-		filesInSourceBytes = filesInSource.stream().mapToLong(File::length).sum();
 
 		if (filesInSource.isEmpty()) {
 			outStream.println("No files found with the given constraints");
 		}
 		else {
 			outStream.println(Integer.toString(filesInSource.size()) + " files found");
-
-			if (filesInSource.size() < maxFilesToCopy || maxFilesToCopy == 0)
-				selectRandomFilesLimitingBytes();
-			else
-				selectRandomFilesLimitingBytesAndNumber();
+			selectedFilesLimitingBytesAndNumber();
 		}
 	}
 
-	private void selectRandomFilesLimitingBytes() {
-		int selectedIndex;
-		long fileLength;
-		long remainingBytesInSource = filesInSourceBytes;
-		while (remainingBytesInSource > getMaxBytesToCopy()) {
-			selectedIndex = random.nextInt(filesInSource.size());
-			fileLength = filesInSource.get(selectedIndex).length();
+	private void selectedFilesLimitingBytesAndNumber() {
+		while (continueFileSelection()) {
+			File randomSourceFile = filesInSource.get(random.nextInt(filesInSource.size()));
+			long fileLength = randomSourceFile.length();
 
-			filesInSource.remove(selectedIndex);
-			remainingBytesInSource -= fileLength;
-		}
-		copiedBytes = remainingBytesInSource;
-		randomSelectedFiles.addAll(filesInSource);
-	}
-
-	private void selectRandomFilesLimitingBytesAndNumber() {
-		while (randomSelectedFiles.size() < maxFilesToCopy) {
-			File selectedFile = filesInSource.get(random.nextInt(filesInSource.size()));
-			long fileLength = selectedFile.length();
-
-			if (fileLength + copiedBytes <= getMaxBytesToCopy()) {        // checking the maximum bytes to be copied
-				randomSelectedFiles.add(selectedFile);
+			if (fileLength <= getMaxBytesToCopy() - copiedBytes) {
+				randomSelectedFiles.add(randomSourceFile);
 				copiedBytes += fileLength;
 			}
-			filesInSource.remove(selectedFile);
+
+			filesInSource.remove(randomSourceFile);
 		}
+	}
+
+	private boolean continueFileSelection() {
+		boolean continueSelection;
+		if (filesInSource.size() < maxFilesToCopy || maxFilesToCopy == 0)
+			continueSelection = copiedBytes < getMaxBytesToCopy() && !filesInSource.isEmpty();
+		else
+			continueSelection = randomSelectedFiles.size() < maxFilesToCopy;
+		return continueSelection;
 	}
 
 	/**
@@ -217,7 +205,9 @@ public class RandomFileCopier {
 		for (File randomFileToCopy : randomSelectedFiles)
 			copyFile(randomFileToCopy);
 
-		outStream.println("Done. " + TransgressoftUtils.byteSizeString(copiedBytes, 4) + " copied");
+		int numFilesCopied = randomSelectedFiles.size();
+		String sizeCopied = TransgressoftUtils.byteSizeString(copiedBytes, 4);
+		outStream.println("Done. " + numFilesCopied + " files, " + sizeCopied + " copied");
 	}
 
 	private void copyFile(File fileToCopy) throws IOException {

@@ -26,7 +26,7 @@ import java.util.*;
  * using the docopt library.
  *
  * @author Octavio Calleya
- * @version 0.2.3
+ * @version 0.2.4
  *
  * <a href="https://github.com/docopt/docopt.java">docopt java</a>
  */
@@ -69,7 +69,7 @@ public class RandomFileCopierRunner {
 
 	@SuppressWarnings ("unchecked")
 	private static void parseArguments(String... args) {
-		Map<String, Object> opts = new Docopt(DOC).withVersion("Random File Copier 0.1").parse(args);
+		Map<String, Object> opts = new Docopt(DOC).withVersion("Random File Copier 0.2.3").parse(args);
 		sourceString = (String) opts.get("<source_directory>");
 		targetString = (String) opts.get("<target_directory>");
 		verboseCmd = (Boolean) opts.get("--verbose");

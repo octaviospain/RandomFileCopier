@@ -12,7 +12,7 @@ import static org.junit.Assert.*;
 
 /**
  * @author Octavio Calleya
- * @version 0.2.3
+ * @version 0.2.4
  */
 public class RandomFileCopierTest {
 
@@ -35,6 +35,21 @@ public class RandomFileCopierTest {
 	@After
 	public void tearDown() {
 		testFolder.delete();
+	}
+
+	@Test
+	public void setMaxBytesAsMinorFileSizeShouldCopyMinorFile() throws Exception {
+		randomFileCopier = new RandomFileCopier(tenTestFilesFolder, testFolderPath, 0);
+		File minorFile = Stream.of(sourceFiles)
+							   .min((file1, file2) -> Long.valueOf(file1.length()).compareTo(file2.length())).get();
+		long minorFileBytes = minorFile.length();
+
+		randomFileCopier.setMaxBytesToCopy(minorFileBytes);
+		randomFileCopier.randomCopy();
+
+		destinationFiles = testFolder.getRoot().listFiles();
+		assertEquals(1, destinationFiles.length);
+		assertTrue(areTheSameFiles(new File[]{minorFile}, destinationFiles));
 	}
 
 	@Test
@@ -99,7 +114,7 @@ public class RandomFileCopierTest {
 		assertEquals("Scanning source directory...", scanningSourceLine);
 		assertTrue(filesFoundLine.matches("\\d{1,} files found"));
 		assertEquals("Copying files to the destination directory...", copyingFilesLine);
-		assertTrue(doneLine.matches("Done. \\d+(.)?\\d* \\w+ copied"));
+		assertTrue(doneLine.matches("Done. \\d+ files, \\d+(.)?\\d* \\w+ copied"));
 	}
 
 	@Test

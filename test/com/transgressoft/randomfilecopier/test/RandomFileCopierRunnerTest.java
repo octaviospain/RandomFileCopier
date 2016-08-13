@@ -68,7 +68,7 @@ public class RandomFileCopierRunnerTest {
 		assertEquals("Scanning source directory...", firstLine);
 		assertTrue(secondLine.matches("\\d{1,} files found"));
 		assertEquals("Copying files to the destination directory...", thirdLine);
-		assertTrue(fourthLine.matches("Done. \\d+(.)?\\d* \\w+ copied"));
+		assertTrue(fourthLine.matches("Done. \\d+ files, \\d+(.)?\\d* \\w+ copied"));
 	}
 
 	@Test
@@ -85,7 +85,7 @@ public class RandomFileCopierRunnerTest {
 		assertEquals("Scanning source directory...", firstLine);
 		assertTrue(secondLine.matches("\\d{1,} files found"));
 		assertEquals("Copying files to the destination directory...", thirdLine);
-		assertTrue(fourthLine.matches("Done. \\d+(.)?\\d* \\w+ copied"));
+		assertTrue(fourthLine.matches("Done. \\d+ files, \\d+(.)?\\d* \\w+ copied"));
 	}
 
 	@Test
@@ -154,7 +154,7 @@ public class RandomFileCopierRunnerTest {
 		assertEquals("Scanning source directory...", firstLine);
 		assertTrue(secondLine.matches("\\d{1,} files found"));
 		assertEquals("Copying files to the destination directory...", thirdLine);
-		assertTrue(fourthLine.matches("Done. \\d+(.)?\\d* \\w+ copied"));
+		assertTrue(fourthLine.matches("Done. \\d+ files, \\d+(.)?\\d* \\w+ copied"));
 
 		for(File file: nonExistentTarget.listFiles())
 			assertTrue(file.delete());
@@ -175,7 +175,7 @@ public class RandomFileCopierRunnerTest {
 		assertEquals("Scanning source directory...", firstLine);
 		assertTrue(secondLine.matches("\\d{1,} files found"));
 		assertEquals("Copying files to the destination directory...", thirdLine);
-		assertTrue(fourthLine.matches("Done. \\d+(.)?\\d* \\w+ copied"));
+		assertTrue(fourthLine.matches("Done. \\d+ files, \\d+(.)?\\d* \\w+ copied"));
 	}
 
 	@Test
