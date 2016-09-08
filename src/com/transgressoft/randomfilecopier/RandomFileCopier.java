@@ -27,7 +27,7 @@ import static java.nio.file.StandardCopyOption.*;
 
 /**
  * This class copies random files that are located in a folder and it
- * subsequent folders to a destination, supplying copyOptions such as limiting
+ * subsequent folders to a destination, supplying copy options such as limiting
  * the number of files, the total space to copy, or filtering the files by its extension.
  *
  * @author Octavio Calleya
@@ -158,14 +158,16 @@ public class RandomFileCopier {
 	private void getRandomFilesInFolderTree() {
 		randomSelectedFiles.clear();
 
-		outStream.println("Scanning source directory...");
+		if (outStream != null)
+			outStream.println("Scanning source directory...");
 		filesInSource = TransgressoftUtils.getAllFilesInFolder(sourcePath.toFile(), filter, 0);
 
 		if (filesInSource.isEmpty()) {
-			outStream.println("No files found with the given constraints");
+			if (outStream != null) outStream.println("No files found with the given constraints");
 		}
 		else {
-			outStream.println(Integer.toString(filesInSource.size()) + " files found");
+			if (outStream != null)
+				outStream.println(Integer.toString(filesInSource.size()) + " files found");
 			selectedFilesLimitingBytesAndNumber();
 		}
 	}
@@ -200,14 +202,16 @@ public class RandomFileCopier {
 	 * @throws IOException
 	 */
 	private void copyRandomFilesToDestination() throws IOException {
-		outStream.println("Copying files to the destination directory...");
+		if (outStream != null)
+			outStream.println("Copying files to the destination directory...");
 
 		for (File randomFileToCopy : randomSelectedFiles)
 			copyFile(randomFileToCopy);
 
 		int numFilesCopied = randomSelectedFiles.size();
 		String sizeCopied = TransgressoftUtils.byteSizeString(copiedBytes, 4);
-		outStream.println("Done. " + numFilesCopied + " files, " + sizeCopied + " copied");
+		if (outStream != null)
+			outStream.println("Done. " + numFilesCopied + " files, " + sizeCopied + " copied");
 	}
 
 	private void copyFile(File fileToCopy) throws IOException {
@@ -217,7 +221,8 @@ public class RandomFileCopier {
 		Files.copy(filePath, destinationPath.resolve(ensuredFileName), copyOptions);
 		if (verbose) {
 			String sizeString = TransgressoftUtils.byteSizeString(fileToCopy.length(), 2);
-			outStream.println("Copied " + ".../" + path + " [" + sizeString + "]");
+			if (outStream != null)
+				outStream.println("Copied " + ".../" + path + " [" + sizeString + "]");
 		}
 	}
 }

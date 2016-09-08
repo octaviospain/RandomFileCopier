@@ -20,7 +20,7 @@ or filtering the files by its extension; ensuring that the files with the same n
 # Usage
 You can use the RandomFileCopier by two ways:
 
-1. Instantiating the `RandomFileCopier.java` class in your java project
+1. Instantiating the `RandomFileCopier` class in your java project
 
 ```java
 int maxFilesToCopy = 25;
@@ -47,6 +47,25 @@ Options:
     -h, --help                     Show this help text.
     <max_files>                    The maximum number of files.
     -v, --verbose                  Show some extra information of the process.
-    -e, --extension=<extension>    Extension required to the file.
-    -s, --space=<maxbytes>         Max bytes to copy in the destination.
+    -e, --extension=<extension>    A required extension of a file to be copied.
+    -s, --space=<maxbytes>         The maximum bytes to copy in the destination.
+```
+
+Example:
+
+```
+java -jar RandomFileCopier-0.2.3.jar /source /target 10 -v -s=5000 -e=pdf -e=txt  
+```
+
+Would print:
+```
+Scanning source directory...
+XY files found
+Copying files to the destination directory...
+Copied .../folder/under/source/file0.txt [31415 B]
+Copied .../folder/under/source/file1.txt [31415 B]
+Copied .../folder/under/source/file2.txt [31415 B]
+Copied .../folder/under/source/file3.pdf [31415 B]
+Copied .../folder/under/source/file4.pdf [31416 B]
+Done. 5 files, xyz B copied
 ```

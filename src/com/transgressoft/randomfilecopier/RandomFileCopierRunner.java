@@ -39,11 +39,11 @@ public class RandomFileCopierRunner {
 			"  RandomFileCopier <source_directory> <target_directory> <max_files> [-v] [-s=<maxbytes>] " +
 			"[-e=<extension>]...\n\n" +
 			"Options:\n" +
-			"  -h, --help  Show this help text.\n" +
-			"  <max_files>  The maximum number of files.\n" +
-			"  -v, --verbose  Show some extra information of the process.\n" +
-			"  -e, --extension=<extension> Extension required to the file.\n" +
-			"  -s, --space=<maxbytes> Max bytes to copy in the destination.\n";
+			"  -h, --help                     Show this help text.\n" +
+			"  <max_files>                    The maximum number of files.\n" +
+			"  -v, --verbose                  Show some extra information of the process.\n" +
+			"  -e, --extension=<extension>    A required extension of a file to be copied\n" +
+			"  -s, --space=<maxbytes>         The maximum bytes to copy in the destination.\n";
 
 	private static File sourceFile;
 	private static File targetFile;
@@ -95,8 +95,11 @@ public class RandomFileCopierRunner {
 
 	private static boolean validArguments() {
 		boolean result = isValidSource();
-		result &= isValidTarget();
-		result &= isValidMaxFilesString();
+		if (result) {
+			result = isValidTarget();
+			if (result)
+				result = isValidMaxFilesString();
+		}
 
 		if (result) {
 			if (sourceFile.equals(targetFile)) {

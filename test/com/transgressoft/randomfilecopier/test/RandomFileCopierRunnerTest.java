@@ -31,11 +31,11 @@ public class RandomFileCopierRunnerTest {
 			"  RandomFileCopier <source_directory> <target_directory> <max_files> [-v] [-s=<maxbytes>] " +
 			"[-e=<extension>]...\n\n" +
 			"Options:\n" +
-			"  -h, --help  Show this help text.\n" +
-			"  <max_files>  The maximum number of files.\n" +
-			"  -v, --verbose  Show some extra information of the process.\n" +
-			"  -e, --extension=<extension> Extension required to the file.\n" +
-			"  -s, --space=<maxbytes> Max bytes to copy in the destination.\n\n";
+			"  -h, --help                     Show this help text.\n" +
+			"  <max_files>                    The maximum number of files.\n" +
+			"  -v, --verbose                  Show some extra information of the process.\n" +
+			"  -e, --extension=<extension>    A required extension of a file to be copied\n" +
+			"  -s, --space=<maxbytes>         The maximum bytes to copy in the destination.\n\n";
 
 	@Before
 	public void setUp() {
@@ -121,7 +121,7 @@ public class RandomFileCopierRunnerTest {
 
 	@Test
 	public void sourceNonExistentTest() throws Exception {
-		testFolderPath = "./nonexistentfolder/";
+		testFolderPath = "./test-resources/nonexistentfolder/";
 		String[] args = new String[]{testFolderPath, testFolderPath, "0"};
 		randomFileCopierRunner.main(args);
 
@@ -140,7 +140,7 @@ public class RandomFileCopierRunnerTest {
 
 	@Test
 	public void targetNonExistentShouldCreateItTest() throws Exception {
-		testFolderPath = "./nonexistentfolder/";
+		testFolderPath = "./test-resources/nonexistentfolder/";
 		File nonExistentTarget = new File(testFolderPath);
 		String[] args = new String[]{tenTestFilesFolder, testFolderPath, "0"};
 		randomFileCopierRunner.main(args);
