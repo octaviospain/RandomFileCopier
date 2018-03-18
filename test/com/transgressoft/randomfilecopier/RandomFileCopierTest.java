@@ -1,40 +1,52 @@
-package com.transgressoft.randomfilecopier.test;
+/******************************************************************************
+ * Copyright 2016-2018 Octavio Calleya                                        *
+ *                                                                            *
+ * Licensed under the Apache License, Version 2.0 (the "License");            *
+ * you may not use this file except in compliance with the License.           *
+ * You may obtain a copy of the License at                                    *
+ *                                                                            *
+ * http://www.apache.org/licenses/LICENSE-2.0                                 *
+ *                                                                            *
+ * Unless required by applicable law or agreed to in writing, software        *
+ * distributed under the License is distributed on an "AS IS" BASIS,          *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.   *
+ * See the License for the specific language governing permissions and        *
+ * limitations under the License.                                             *
+ ******************************************************************************/
 
-import com.transgressoft.randomfilecopier.*;
-import org.junit.*;
-import org.junit.rules.*;
+package com.transgressoft.randomfilecopier;
+
+import junitx.framework.*;
+import org.junit.jupiter.api.*;
 
 import java.io.*;
+import java.nio.file.*;
 import java.util.*;
 import java.util.stream.*;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author Octavio Calleya
- * @version 0.2.4
  */
 public class RandomFileCopierTest {
 
-	String tenTestFilesFolder = "test-resources/10testfiles/";
-	String testFolderPath;
 
-    @Rule
-    public TemporaryFolder testFolder = new TemporaryFolder();
+	Path tenTestFilesFolder = Paths.get("test-resources", "10testfiles");
+	Path testFolderPath;
 
-	File sourceFolderFile = new File(tenTestFilesFolder);
-	File[] sourceFiles = sourceFolderFile.listFiles();
+	File[] sourceFiles = tenTestFilesFolder.toFile().listFiles();
 	File[] destinationFiles;
 	RandomFileCopier randomFileCopier;
 
-	@Before
-	public void setUp() {
-		testFolderPath = testFolder.getRoot().getAbsolutePath();
+	@BeforeEach
+	public void setUp() throws IOException {
+        testFolderPath = Files.createTempDirectory(getClass().getName());
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() {
-		testFolder.delete();
+        testFolderPath.toFile().delete();
 	}
 
 	@Test
@@ -47,15 +59,15 @@ public class RandomFileCopierTest {
 		randomFileCopier.setMaxBytesToCopy(minorFileBytes);
 		randomFileCopier.randomCopy();
 
-		destinationFiles = testFolder.getRoot().listFiles();
+		destinationFiles = testFolderPath.toFile().listFiles();
 		assertEquals(1, destinationFiles.length);
-		assertTrue(areTheSameFiles(new File[]{minorFile}, destinationFiles));
+		Stream.of(destinationFiles).forEach(f -> FileAssert.assertBinaryEquals(minorFile, f));
 	}
 
 	@Test
 	public void setMaxBytesToCopySmallerThanDestinationSpace() throws Exception {
 		randomFileCopier = new RandomFileCopier(tenTestFilesFolder, testFolderPath, 0);
-		long maxBytesInDestination = testFolder.getRoot().getUsableSpace() - 1;
+		long maxBytesInDestination = testFolderPath.toFile().getUsableSpace() - 1;
 
 		randomFileCopier.setMaxBytesToCopy(maxBytesInDestination);
 
@@ -65,7 +77,7 @@ public class RandomFileCopierTest {
 	@Test
 	public void setMaxBytesToCopyGreaterThanDestinationSpace() throws Exception {
 		randomFileCopier = new RandomFileCopier(tenTestFilesFolder, testFolderPath, 0);
-		long maxBytesInDestination = testFolder.getRoot().getUsableSpace();
+		long maxBytesInDestination = testFolderPath.toFile().getUsableSpace();
 
 		randomFileCopier.setMaxBytesToCopy(maxBytesInDestination + 1);
 
@@ -84,9 +96,9 @@ public class RandomFileCopierTest {
 
 	@Test
 	public void copyWithGivenPrintStreamVerboseIsCorrect() throws Exception {
-		File logFile = testFolder.newFile("log.txt");
+		File logFile = Files.createTempFile(testFolderPath, "log", "txt").toFile();
 		PrintStream printStream = new PrintStream(logFile);
-		sourceFiles = sourceFolderFile.listFiles();
+		sourceFiles = tenTestFilesFolder.toFile().listFiles();
 		randomFileCopier = new RandomFileCopier(tenTestFilesFolder, testFolderPath, 0, printStream);
 		randomFileCopier.setVerbose(true);
 		randomFileCopier.randomCopy();
@@ -106,11 +118,11 @@ public class RandomFileCopierTest {
 		String doneLine = logScanner.nextLine();
 		logScanner.close();
 		assertTrue(logFile.delete());
-		destinationFiles = testFolder.getRoot().listFiles();
+		destinationFiles = testFolderPath.toFile().listFiles();
 
-		assertEquals(10, destinationFiles.length);
-		assertEquals(10, numCopiedFiles);
-		assertEquals(10, numCopiedFilesPrint);
+		assertEquals(sourceFiles.length, destinationFiles.length);
+		assertEquals(sourceFiles.length, numCopiedFiles);
+		assertEquals(sourceFiles.length, numCopiedFilesPrint);
 		assertEquals("Scanning source directory...", scanningSourceLine);
 		assertTrue(filesFoundLine.matches("\\d{1,} files found"));
 		assertEquals("Copying files to the destination directory...", copyingFilesLine);
@@ -119,11 +131,10 @@ public class RandomFileCopierTest {
 
 	@Test
 	public void copyFromEmptyFolder() throws Exception {
-		File logFile = testFolder.newFile("log.txt");
+        File logFile = Files.createTempFile("log", "txt").toFile();
 		PrintStream printStream = new PrintStream(logFile);
-		TemporaryFolder emptyFolder = new TemporaryFolder();
-		emptyFolder.create();
-		randomFileCopier = new RandomFileCopier(emptyFolder.getRoot().getAbsolutePath(), testFolderPath, 0, printStream);
+		Path emptyFolder = Files.createTempDirectory(getClass().getName());
+		randomFileCopier = new RandomFileCopier(emptyFolder, testFolderPath, 0, printStream);
 		randomFileCopier.setVerbose(true);
 		randomFileCopier.randomCopy();
 
@@ -132,7 +143,7 @@ public class RandomFileCopierTest {
 		String noFilesFoundLine = logScanner.nextLine();
 		logScanner.close();
 		assertTrue(logFile.delete());
-		destinationFiles = testFolder.getRoot().listFiles();
+        destinationFiles = testFolderPath.toFile().listFiles();
 
 		assertEquals(0, destinationFiles.length);
 		assertEquals("Scanning source directory...", scanningSourceLine);
@@ -145,7 +156,7 @@ public class RandomFileCopierTest {
 		randomFileCopier = new RandomFileCopier(tenTestFilesFolder, testFolderPath, 5);
 		randomFileCopier.randomCopy();
 
-		destinationFiles = testFolder.getRoot().listFiles();
+		destinationFiles = testFolderPath.toFile().listFiles();
 		assertTrue(maxFilesToCopy >= destinationFiles.length);
 	}
 
@@ -157,7 +168,7 @@ public class RandomFileCopierTest {
 		randomFileCopier.setMaxBytesToCopy(totalBytesInSource / 2);
 		randomFileCopier.randomCopy();
 
-		destinationFiles = testFolder.getRoot().listFiles();
+		destinationFiles = testFolderPath.toFile().listFiles();
 		long totalBytesCopiedInDestination = Stream.of(destinationFiles).mapToLong(File::length).sum();
 		assertTrue(totalBytesCopiedInDestination <= totalBytesInSource / 2);
 	}
@@ -165,15 +176,16 @@ public class RandomFileCopierTest {
 	@Test
 	public void copyAllFilesRegardingMoreBytesThanAvailable() throws Exception {
 		randomFileCopier = new RandomFileCopier(tenTestFilesFolder, testFolderPath, 0);
-		long maxBytesInDestination = testFolder.getRoot().getUsableSpace() + 1;
+		long maxBytesInDestination = testFolderPath.toFile().getUsableSpace() + 1;
 
 		randomFileCopier.setMaxBytesToCopy(maxBytesInDestination);
 		randomFileCopier.randomCopy();
 
-		destinationFiles = testFolder.getRoot().listFiles();
+        destinationFiles = testFolderPath.toFile().listFiles();
 
-		assertEquals(10, destinationFiles.length);
-		assertTrue(areTheSameFiles(sourceFiles, destinationFiles));
+        assertEquals(sourceFiles.length, destinationFiles.length);
+        for (int f = 0; f < sourceFiles.length; f++)
+            FileAssert.assertBinaryEquals(sourceFiles[f], destinationFiles[f]);
 	}
 
 	@Test
@@ -181,10 +193,11 @@ public class RandomFileCopierTest {
 		randomFileCopier = new RandomFileCopier(tenTestFilesFolder, testFolderPath, 11);
 		randomFileCopier.randomCopy();
 
-		destinationFiles = testFolder.getRoot().listFiles();
+        destinationFiles = testFolderPath.toFile().listFiles();
 
-		assertEquals(10, destinationFiles.length);
-		assertTrue(areTheSameFiles(sourceFiles, destinationFiles));
+		assertEquals(sourceFiles.length, destinationFiles.length);
+		for (int f = 0; f < sourceFiles.length; f++)
+		    FileAssert.assertBinaryEquals(sourceFiles[f], destinationFiles[f]);
 	}
 
 	@Test
@@ -192,27 +205,10 @@ public class RandomFileCopierTest {
 		randomFileCopier = new RandomFileCopier(tenTestFilesFolder, testFolderPath, 0);
 		randomFileCopier.randomCopy();
 
-		destinationFiles = testFolder.getRoot().listFiles();
+		destinationFiles = testFolderPath.toFile().listFiles();
 
-		assertEquals(10, destinationFiles.length);
-		assertTrue(areTheSameFiles(sourceFiles, destinationFiles));
-	}
-
-	private boolean areTheSameFiles(File[] sourceFiles, File[] targetFiles) {
-		boolean result = true;
-		Map<String, Long> lengthByFileNameMap = new HashMap<>();
-		for(File sourceFile: sourceFiles)
-			lengthByFileNameMap.put(sourceFile.getName(), sourceFile.length());
-
-		for(File expectedFile: targetFiles) {
-			String expectedFileName = expectedFile.getName();
-			long expectedFileLength = expectedFile.length();
-
-			result &= lengthByFileNameMap.containsKey(expectedFileName);
-			result &= lengthByFileNameMap.get(expectedFileName).equals(expectedFileLength);
-			if(!result)
-				break;
-		}
-		return result;
+        assertEquals(sourceFiles.length, destinationFiles.length);
+        for (int f = 0; f < sourceFiles.length; f++)
+            FileAssert.assertBinaryEquals(sourceFiles[f], destinationFiles[f]);
 	}
 }

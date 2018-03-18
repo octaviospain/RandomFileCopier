@@ -1,16 +1,29 @@
-package com.transgressoft.randomfilecopier.test;
+/******************************************************************************
+ * Copyright 2016-2018 Octavio Calleya                                        *
+ *                                                                            *
+ * Licensed under the Apache License, Version 2.0 (the "License");            *
+ * you may not use this file except in compliance with the License.           *
+ * You may obtain a copy of the License at                                    *
+ *                                                                            *
+ * http://www.apache.org/licenses/LICENSE-2.0                                 *
+ *                                                                            *
+ * Unless required by applicable law or agreed to in writing, software        *
+ * distributed under the License is distributed on an "AS IS" BASIS,          *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.   *
+ * See the License for the specific language governing permissions and        *
+ * limitations under the License.                                             *
+ ******************************************************************************/
 
-import com.transgressoft.randomfilecopier.*;
-import org.junit.*;
-import org.junit.rules.*;
+package com.transgressoft.randomfilecopier;
+
+import org.junit.jupiter.api.*;
 
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 import java.util.stream.*;
 
-import static junit.framework.TestCase.assertTrue;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author Octavio Calleya
@@ -18,13 +31,12 @@ import static org.junit.Assert.assertEquals;
 public class RandomFileCopierRunnerTest {
 
 	String tenTestFilesFolder = "test-resources/10testfiles/";
-	String testFolderPath;
 
-	@Rule
-	public TemporaryFolder testFolder = new TemporaryFolder();
+	static Path parentTestFolder;
+	Path testFolder;
 
-	RandomFileCopierRunner randomFileCopierRunner;
-	ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+    RandomFileCopierRunner randomFileCopierRunner;
+    ByteArrayOutputStream outContent = new ByteArrayOutputStream();
 
 	String DOC = "Random File Copier.\n\n" +
 			"Usage:\n" +
@@ -37,16 +49,15 @@ public class RandomFileCopierRunnerTest {
 			"  -e, --extension=<extension>    A required extension of a file to be copied\n" +
 			"  -s, --space=<maxbytes>         The maximum bytes to copy in the destination.\n\n";
 
-	@Before
-	public void setUp() {
-		System.setOut(new PrintStream(outContent));
-		testFolderPath = testFolder.getRoot().getAbsolutePath();
-	}
+	@BeforeAll
+    public static void beforeAll() throws IOException {
+        parentTestFolder =  Files.createTempDirectory("RandomFileCopierTest");
+    }
 
-	@After
-	public void tearDown() {
-		System.setOut(null);
-		testFolder.delete();
+	@BeforeEach
+	public void setUp() throws IOException {
+		System.setOut(new PrintStream(outContent));
+		testFolder =  Files.createTempDirectory(parentTestFolder, "case");
 	}
 
 	@Test
@@ -56,7 +67,7 @@ public class RandomFileCopierRunnerTest {
 									.mapToLong(File::length)
 									.sum();
 
-		String[] args = new String[]{tenTestFilesFolder, testFolderPath, "0", "-s=" + allFilesBytes};
+		String[] args = new String[]{tenTestFilesFolder, testFolder.toString(), "0", "-s=" + allFilesBytes};
 		randomFileCopierRunner.main(args);
 
 		StringTokenizer stringTokenizer = new StringTokenizer(outContent.toString(), "\n");
@@ -73,7 +84,7 @@ public class RandomFileCopierRunnerTest {
 
 	@Test
 	public void copyWithNegativeBytesCopiesAllTest() throws Exception {
-		String[] args = new String[]{tenTestFilesFolder, testFolderPath, "0", "-s=-1"};
+		String[] args = new String[]{tenTestFilesFolder, testFolder.toString(), "0", "-s=-1"};
 		randomFileCopierRunner.main(args);
 
 		StringTokenizer stringTokenizer = new StringTokenizer(outContent.toString(), "\n");
@@ -90,7 +101,7 @@ public class RandomFileCopierRunnerTest {
 
 	@Test
 	public void copyWithNonExistentExtensionCopiesNothingTest() throws Exception {
-		String[] args = new String[]{tenTestFilesFolder, testFolderPath, "0", "-e=pdf"};
+		String[] args = new String[]{tenTestFilesFolder, testFolder.toString(), "0", "-e=pdf"};
 		randomFileCopierRunner.main(args);
 
 		StringTokenizer stringTokenizer = new StringTokenizer(outContent.toString(), "\n");
@@ -112,7 +123,7 @@ public class RandomFileCopierRunnerTest {
 
 	@Test
 	public void sourceNotDirectoryTest() throws Exception {
-		String[] args = new String[]{tenTestFilesFolder + "texttestfile1.txt", testFolderPath, "0"};
+		String[] args = new String[]{tenTestFilesFolder + "texttestfile1.txt", testFolder.toString(), "0"};
 		randomFileCopierRunner.main(args);
 
 		String expectedMessage = "ERROR: Source path is not a directory\n\n" + DOC;
@@ -121,8 +132,8 @@ public class RandomFileCopierRunnerTest {
 
 	@Test
 	public void sourceNonExistentTest() throws Exception {
-		testFolderPath = "./test-resources/nonexistentfolder/";
-		String[] args = new String[]{testFolderPath, testFolderPath, "0"};
+        testFolder = Paths.get("test-resources", "nonexistentfolder/");
+		String[] args = new String[]{testFolder.toString(), testFolder.toString(), "0"};
 		randomFileCopierRunner.main(args);
 
 		String expectedMessage = "ERROR: Source path doesn't exist\n\n" + DOC;
@@ -140,9 +151,9 @@ public class RandomFileCopierRunnerTest {
 
 	@Test
 	public void targetNonExistentShouldCreateItTest() throws Exception {
-		testFolderPath = "./test-resources/nonexistentfolder/";
-		File nonExistentTarget = new File(testFolderPath);
-		String[] args = new String[]{tenTestFilesFolder, testFolderPath, "0"};
+	    testFolder = Paths.get("test-resources", "nonexistentfolder/");
+		File nonExistentTarget = new File(testFolder.toString());
+		String[] args = new String[]{tenTestFilesFolder, testFolder.toString(), "0"};
 		randomFileCopierRunner.main(args);
 
 		StringTokenizer stringTokenizer = new StringTokenizer(outContent.toString(), "\n");
@@ -163,7 +174,7 @@ public class RandomFileCopierRunnerTest {
 
 	@Test
 	public void maxFilesIsMaxValueTest() throws Exception {
-		String[] args = new String[]{tenTestFilesFolder, testFolderPath, Integer.toString(Integer.MAX_VALUE)};
+		String[] args = new String[]{tenTestFilesFolder, testFolder.toString(), Integer.toString(Integer.MAX_VALUE)};
 		randomFileCopierRunner.main(args);
 
 		StringTokenizer stringTokenizer = new StringTokenizer(outContent.toString(), "\n");
@@ -180,7 +191,7 @@ public class RandomFileCopierRunnerTest {
 
 	@Test
 	public void maxFilesInvalidTest() throws Exception {
-		String[] args = new String[]{tenTestFilesFolder, testFolderPath, "a"};
+		String[] args = new String[]{tenTestFilesFolder, testFolder.toString(), "a"};
 		randomFileCopierRunner.main(args);
 
 		String expectedMessage = "ERROR: MaxFiles must be between 0 and " + Integer.MAX_VALUE + " inclusively\n\n" + DOC;

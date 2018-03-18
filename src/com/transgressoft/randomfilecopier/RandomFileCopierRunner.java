@@ -1,18 +1,18 @@
-/**
- * Copyright 2016 Octavio Calleya
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+/******************************************************************************
+ * Copyright 2016-2018 Octavio Calleya                                        *
+ *                                                                            *
+ * Licensed under the Apache License, Version 2.0 (the "License");            *
+ * you may not use this file except in compliance with the License.           *
+ * You may obtain a copy of the License at                                    *
+ *                                                                            *
+ * http://www.apache.org/licenses/LICENSE-2.0                                 *
+ *                                                                            *
+ * Unless required by applicable law or agreed to in writing, software        *
+ * distributed under the License is distributed on an "AS IS" BASIS,          *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.   *
+ * See the License for the specific language governing permissions and        *
+ * limitations under the License.                                             *
+ ******************************************************************************/
 
 package com.transgressoft.randomfilecopier;
 
@@ -26,7 +26,7 @@ import java.util.*;
  * using the docopt library.
  *
  * @author Octavio Calleya
- * @version 0.2.4
+ * @version 0.2.6
  *
  * <a href="https://github.com/docopt/docopt.java">docopt java</a>
  */
@@ -58,7 +58,7 @@ public class RandomFileCopierRunner {
 		parseArguments(args);
 
 		if (validArguments()) {
-			RandomFileCopier copier = new RandomFileCopier(sourceFile.toString(), targetFile.toString(), maxFilesCmd);
+			RandomFileCopier copier = new RandomFileCopier(sourceFile.toPath(), targetFile.toPath(), maxFilesCmd);
 			copier.setVerbose(verboseCmd);
 			copier.setFilterExtensions(extensionsCmd);
 			if (maxBytesCmd > 0)
