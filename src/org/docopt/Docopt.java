@@ -1,76 +1,31 @@
+/******************************************************************************
+ * Copyright 2016-2018 Octavio Calleya                                        *
+ *                                                                            *
+ * Licensed under the Apache License, Version 2.0 (the "License");            *
+ * you may not use this file except in compliance with the License.           *
+ * You may obtain a copy of the License at                                    *
+ *                                                                            *
+ * http://www.apache.org/licenses/LICENSE-2.0                                 *
+ *                                                                            *
+ * Unless required by applicable law or agreed to in writing, software        *
+ * distributed under the License is distributed on an "AS IS" BASIS,          *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.   *
+ * See the License for the specific language governing permissions and        *
+ * limitations under the License.                                             *
+ ******************************************************************************/
+
 package org.docopt;
 
-import static org.docopt.Python.bool;
-import static org.docopt.Python.in;
-import static org.docopt.Python.isUpper;
-import static org.docopt.Python.join;
-import static org.docopt.Python.list;
-import static org.docopt.Python.partition;
-import static org.docopt.Python.set;
-import static org.docopt.Python.split;
+import org.docopt.Pattern.*;
+import org.docopt.Python.*;
 
-import java.io.InputStream;
-import java.io.PrintStream;
-import java.nio.charset.Charset;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
-import java.util.Set;
+import java.io.*;
+import java.nio.charset.*;
+import java.util.*;
 
-import org.docopt.Pattern.MatchResult;
-import org.docopt.Python.Re;
+import static org.docopt.Python.*;
 
 // @formatter:off
-/**
- * Command-line interface parser that will make you smile.
- * <p>
- * Parses arguments based on the same POSIX-style usage pattern that would be
- * displayed when using the --help option. Simplifies handling command line
- * arguments and ensures that the parser is consistent with the documentation.
- * <h3>Example</h3>
- *
- * <pre>
- * class NavalFate {
- *
- *   private static final String doc =
- *       &quot;Naval Fate.\n&quot;
- *       + &quot;\n&quot;
- *       + &quot;Usage:\n&quot;
- *       + &quot;  naval_fate ship new &lt;name&gt;...\n&quot;
- *       + &quot;  naval_fate ship &lt;name&gt; move &lt;x&gt; &lt;y&gt; [--speed=&lt;kn&gt;]\n&quot;
- *       + &quot;  naval_fate ship shoot &lt;x&gt; &lt;y&gt;\n&quot;
- *       + &quot;  naval_fate mine (set|remove) &lt;x&gt; &lt;y&gt; [--moored | --drifting]\n&quot;
- *       + &quot;  naval_fate (-h | --help)\n&quot;
- *       + &quot;  naval_fate --version\n&quot;
- *       + &quot;\n&quot;
- *       + &quot;Options:\n&quot;
- *       + &quot;  -h --help     Show this screen.\n&quot;
- *       + &quot;  --version     Show version.\n&quot;
- *       + &quot;  --speed=&lt;kn&gt;  Speed in knots [default: 10].\n&quot;
- *       + &quot;  --moored      Moored (anchored) mine.\n&quot;
- *       + &quot;  --drifting    Drifting mine.\n&quot;
- *       + &quot;\n&quot;;
- *
- *   public static void main(String[] args) {
- *     Map&lt;String, Object&gt; opts =
- *         new Docopt(doc).withVersion(&quot;Naval Fate 2.0&quot;).parse(args);
- *     System.out.println(opts);
- *   }
- * }
- * </pre>
- *
- * Licensed under terms of MIT license (see LICENSE).
- * <p>
- * Copyright (c) 2012 Vladimir Keleshev, vladimir@keleshev.com<br />
- * Copyright (c) 2014 Damien Giese, damien.giese@gmail.com
- *
- * @version 0.6.0
- * @see <a href="http://docopt.org">docopt.org</a>
- * @see <a href="https://github.com/docopt/docopt.java">docopt for Java</a>
- */
 // @formatter:on
 public final class Docopt {
 
